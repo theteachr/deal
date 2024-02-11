@@ -13,16 +13,25 @@ let view Game.{ table = { current = player; _ }; deck; turn } =
   Format.sprintf
     {|
 
-%s's turn (%d).
-%d card(s) left in the deck.
+%s is playing (%d).
 
 -- hand --
 
 %s
 
+┌───────────┐
+│           │
+│           │
+│           │
+│   %3d     │
+│           │
+│           │
+│ Deck      │
+└───────────┘
   |}
-    player.name turn (Deck.count deck)
+    player.name turn
     (Player.Hand.to_string player.hand)
+    (Deck.count deck)
 
 let deal = Minttea.app ~init ~update ~view ()
 
@@ -31,5 +40,5 @@ let () =
     [ "theteachr"; "procrastination"; "oat"; "patate" ]
     |> List.map Player.create
   in
-  let game = Game.(create players |> start_turn) in
-  Minttea.start deal ~initial_model:game
+  let game = Game.create players in
+  Minttea.start deal ~initial_model:(Game.start_turn game)
