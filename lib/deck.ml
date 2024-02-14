@@ -1,4 +1,4 @@
-type t = (Card.Any.t, Card.inactive) Card.t list
+type t = Card.t list
 
 let default =
   [
@@ -13,7 +13,7 @@ let default =
   ]
   |> List.flatten
 
-let draw (n : int) (deck : t) : ('any, _) Card.t list * t =
+let draw (n : int) (deck : t) : Card.t list * t =
   let rec draw_n n drawn = function
     | deck when n = 0 -> (drawn, deck)
     | [] as empty -> (drawn, empty)

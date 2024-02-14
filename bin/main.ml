@@ -9,7 +9,7 @@ let update event game =
   | Event.KeyDown (Key "p") -> (Game.end_turn game, Command.Noop)
   | _ -> (game, Command.Noop)
 
-let view Game.{ table = { current = player; _ }; deck; turn } =
+let view Game.{ table = player, _; deck; turn } =
   Format.sprintf
     {|
 

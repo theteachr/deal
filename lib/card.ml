@@ -1,71 +1,45 @@
-type inactive
-
-type ('a, 'state) t = {
-  value : int;
-  kind : 'a;
-}
-[@@deriving show]
-
-module Color_values : sig
-  val get : Color.t -> int
-end = struct
-  module Values = Map.Make (Color)
-
-  let values =
-    Values.(
-      empty
-      |> add Color.Brown 1
-      |> add Color.Black 2
-      |> add Color.Blue 4
-      |> add Color.Sky_blue 1
-      |> add Color.Orange 2
-      |> add Color.Green 4
-      |> add Color.Red 3
-      |> add Color.Magenta 2
-      |> add Color.Turquoise 2
-      |> add Color.Yellow 3)
-
-  let get color = Values.find color values
-end
-
-module Property = struct
-  type t = {
-    name : string;
-    color : Color.t;
-  }
+module Action = struct
+  type building =
+    | Hotel
+    | House
   [@@deriving show]
 
-  module Rent_vectors = Map.Make (Color)
-
-  let rent_vector (color : Color.t) : int list =
-    let rent_vectors = [] |> Rent_vectors.of_list in
-    Rent_vectors.find color rent_vectors
-end
-
-module Action = struct
-  type t
+  type t =
+    | Birthday
+    | Debt_collector
+    | Double_the_rent
+    | Forced_deal
+    | Building of building
+    | Just_say_no
+    | Pass_go
+    | Sly_deal
+  [@@deriving show]
 end
 
 module Money = struct
-  type t = unit [@@deriving show]
+  type t =
+    | Money of int
+    | Action of Action.t
+  [@@deriving show]
 end
 
-module WildProperty = struct
+module Property = struct
   type t =
+    | Simple of Color.t * string
     | Dual of Color.t * Color.t
     | Wild
   [@@deriving show]
+
+  module Set = struct
+    type nonrec t = t list * Action.building list
+  end
 end
 
-module Any = struct
-  type t =
-    | Money of Money.t
-    | WildProperty of WildProperty.t
-    | Property of Property.t
-  [@@deriving show]
-end
+type t =
+  | Money of Money.t
+  | Property of Property.t
+  | Action of Action.t
+[@@deriving show]
 
-let money value = { value; kind = Any.Money () }
-
-let property color name =
-  { value = Color_values.get color; kind = Any.Property { color; name } }
+let property color name = Property (Property.Simple (color, name))
+let money value = Money (Money.Money value)

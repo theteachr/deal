@@ -1,22 +1,15 @@
 module Hand = struct
-  type t = (Card.Any.t, Card.inactive) Card.t list
+  type t = Card.t list
 
+  let empty = []
   let is_empty = List.is_empty
-
-  let to_string (hand : t) =
-    hand
-    |> List.map (fun Card.{ value; kind } ->
-           Printf.sprintf "{ value = %d; kind = %s }" value (Card.Any.show kind))
-    |> String.concat "\n"
+  let to_string hand = hand |> List.map Card.show |> String.concat "\n"
 end
 
 module Bank = struct
-  type t = {
-    monies : (Card.Money.t, Card.inactive) Card.t list;
-    actions : (Card.Action.t, Card.inactive) Card.t list;
-  }
+  type t = Card.Money.t list
 
-  let empty = { monies = []; actions = [] }
+  let empty = []
 end
 
 module Assets = struct
@@ -24,7 +17,7 @@ module Assets = struct
 
   type t = {
     bank : Bank.t;
-    properties : Card.Property.t Properties.t;
+    properties : Card.Property.Set.t Properties.t;
   }
 
   let empty = { bank = Bank.empty; properties = Properties.empty }
@@ -36,7 +29,7 @@ type t = {
   assets : Assets.t;
 }
 
-let create name = { name; hand = []; assets = Assets.empty }
+let create name = { name; hand = Hand.empty; assets = Assets.empty }
 
 let update_hand player cards =
   { player with hand = List.rev_append cards player.hand }
