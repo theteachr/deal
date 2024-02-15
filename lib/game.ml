@@ -7,41 +7,58 @@ module Table = struct
     | _ -> failwith "should not be empty"
 end
 
-type state = Choosing_from_hand of int
+module State = struct
+  type choosing = Hand of int
+
+  type t = {
+    cards_played : int;
+    choosing : choosing;
+  }
+
+  let start = { cards_played = 0; choosing = Hand 0 }
+end
 
 type t = {
   table : Table.t;
   deck : Deck.t;
   turn : int;
-  state : state;
+  state : State.t;
 }
 
-let choose_prev ({ table = player, _; state; _ } as game) =
-  let state =
-    match state with
-    | Choosing_from_hand i ->
-        let length = List.length player.hand in
-        Choosing_from_hand ((i + length - 1) mod length)
-  in
-  { game with state }
+type choose_direction =
+  | Next
+  | Prev
 
-let choose_next ({ table = player, _; state; _ } as game) =
-  let state =
-    match state with
-    | Choosing_from_hand i ->
-        Choosing_from_hand ((i + 1) mod List.length player.hand)
+let choose_from_hand ({ table = player, _; state; _ } as game) direction =
+  let length = List.length player.hand in
+  let get_index i =
+    let x = match direction with Next -> i + 1 | Prev -> i + length - 1 in
+    x mod length
   in
-  { game with state }
+  let choosing =
+    match state.choosing with State.Hand i -> State.Hand (get_index i)
+  in
+  { game with state = { state with choosing } }
 
 let start_turn { table = player, opponents; deck; turn; _ } =
   let n = if Player.empty_hand player then 5 else 2 in
   let cards, deck = Deck.draw n deck in
   let player = Player.update_hand player cards in
   let table = (player, opponents) in
-  { table; deck; turn = turn + 1; state = Choosing_from_hand 0 }
+  { table; deck; turn = turn + 1; state = State.start }
 
-let end_turn ({ table; _ } as game : t) : t =
-  { game with table = Table.turn table } |> start_turn
+let play ({ table = player, opponents; state; _ } as game : t) : t =
+  let chosen_card =
+    match state.choosing with Hand i -> List.nth player.hand i
+  in
+  let player =
+    match chosen_card with
+    | Property card -> Player.add_property card player
+    | Money _ -> failwith "todo: add money card"
+    | Action _ -> failwith "todo: play action card"
+    | Rent _ -> failwith "todo: play rent card"
+  in
+  { game with table = Table.turn (player, opponents) } |> start_turn
 
 let running { deck; _ } = not (Deck.is_empty deck)
 
@@ -51,4 +68,4 @@ let create players =
     | current :: opponents -> (current, opponents)
     | [] -> failwith "no players"
   in
-  { table; deck = Deck.default; turn = 0; state = Choosing_from_hand 0 }
+  { table; deck = Deck.default; turn = 0; state = State.start }

@@ -3,7 +3,6 @@ module Hand = struct
 
   let empty = []
   let is_empty = List.is_empty
-  let to_string hand = hand |> List.map Card.show |> String.concat "\n"
 end
 
 module Bank = struct
@@ -20,6 +19,18 @@ module Assets = struct
     properties : Card.Property.Set.t Properties.t;
   }
 
+  let add_money money assets = { assets with bank = money :: assets.bank }
+
+  let add_property card ({ properties; _ } as assets) =
+    let color = Card.Property.color card in
+    let set =
+      match Properties.find_opt color properties with
+      | Some set -> set
+      | None ->
+          Card.Property.Set.create () |> Card.Property.Set.add_property card
+    in
+    { assets with properties = Properties.add color set properties }
+
   let empty = { bank = Bank.empty; properties = Properties.empty }
 end
 
@@ -35,3 +46,9 @@ let update_hand player cards =
   { player with hand = List.rev_append cards player.hand }
 
 let empty_hand { hand; _ } = Hand.is_empty hand
+
+let add_property property player =
+  { player with assets = Assets.add_property property player.assets }
+
+let add_money money player =
+  { player with assets = Assets.add_money money player.assets }
