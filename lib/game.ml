@@ -54,7 +54,7 @@ let play ({ table = player, opponents; state; _ } as game : t) : t =
   let player =
     match chosen_card with
     | Property card -> Player.add_property card player
-    | Money _ -> failwith "todo: add money card"
+    | Money card -> Player.add_money card player
     | Action _ -> failwith "todo: play action card"
     | Rent _ -> failwith "todo: play rent card"
   in
