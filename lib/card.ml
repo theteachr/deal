@@ -96,6 +96,13 @@ module Property = struct
         match used with Left -> lcolor | Right -> rcolor)
     | Wild color -> color
 
+  let display = function
+    | Simple (color, name) ->
+        let open Color in
+        Printf.sprintf "(%d) %s %s" (value color) (display color) name
+    | Dual (dual, value) -> Printf.sprintf "(%d) %s" value (Dual.display dual)
+    | Wild _ -> Printf.sprintf "(0) Wild Property"
+
   module Set = struct
     type nonrec t = t list * Action.building list
 
@@ -153,10 +160,7 @@ let rent colors (value : int) = Rent (Rent.dual colors value)
 let wild_rent = Rent Rent.wild
 
 let display = function
-  | Money card -> Printf.sprintf "%d M" (Money.value card)
-  | Property card ->
-      let color = Property.color card in
-      Printf.sprintf "(%d) %s %s" (Color.value color) (Color.display color)
-        (Property.name card)
+  | Money card -> Printf.sprintf "(%d) Money" (Money.value card)
+  | Property card -> Property.display card
   | Action card -> Action.(Printf.sprintf "(%d) %s" (value card) (name card))
-  | Rent card -> Printf.sprintf "%d R" (Rent.value card)
+  | Rent card -> Rent.display card
