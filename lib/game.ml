@@ -68,4 +68,4 @@ let create players =
     | current :: opponents -> (current, opponents)
     | [] -> failwith "no players"
   in
-  { table; deck = Deck.default; turn = 0; state = State.start }
+  { table; deck = Deck.(shuffle default); turn = 0; state = State.start }
