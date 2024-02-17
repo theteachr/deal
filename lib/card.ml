@@ -11,6 +11,13 @@ module Dual = struct
   [@@deriving show]
 
   let of_colors colors = { colors; used = Left }
+
+  let display { colors = lcolor, rcolor; used } =
+    match used with
+    | Left ->
+        Printf.sprintf "(%s) %s" (Color.display lcolor) (Color.display rcolor)
+    | Right ->
+        Printf.sprintf "%s (%s)" (Color.display lcolor) (Color.display rcolor)
 end
 
 module Action = struct
@@ -121,6 +128,15 @@ module Rent = struct
   let value { value; _ } = value
   let dual colors value = { value; colors = Dual (Dual.of_colors colors) }
   let wild = { value = 3; colors = Wild }
+
+  let display { value; colors } =
+    let suffix =
+      match colors with
+      | Dual { colors = a, b; _ } ->
+          Printf.sprintf "%s%s Rent" (Color.display a) (Color.display b)
+      | Wild -> "Wild Rent"
+    in
+    Printf.sprintf "(%d) %s" value suffix
 end
 
 type t =
@@ -140,6 +156,7 @@ let display = function
   | Money card -> Printf.sprintf "%d M" (Money.value card)
   | Property card ->
       let color = Property.color card in
-      Printf.sprintf "%s %s" (Color.display color) (Property.name card)
-  | Action card -> Action.name card
-  | Rent _ -> failwith "todo: display rent"
+      Printf.sprintf "(%d) %s %s" (Color.value color) (Color.display color)
+        (Property.name card)
+  | Action card -> Action.(Printf.sprintf "(%d) %s" (value card) (name card))
+  | Rent card -> Printf.sprintf "%d R" (Rent.value card)
