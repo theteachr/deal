@@ -1,12 +1,22 @@
 module Hand = struct
-  type t = Card.t list
+  type t = Card.t list [@@deriving show]
 
   let empty = []
   let is_empty = List.is_empty
+
+  let remove_card index hand =
+    let rec remove cards index acc =
+      match cards with
+      | [] -> failwith "index out of bounds"
+      | card :: cards ->
+          if index = 0 then (card, List.rev_append acc cards)
+          else remove cards (index - 1) (card :: acc)
+    in
+    remove hand index []
 end
 
 module Bank = struct
-  type t = Card.Money.t list
+  type t = Card.Money.t list [@@deriving show]
 
   let empty = []
 end
@@ -24,10 +34,10 @@ module Assets = struct
   let add_property card ({ properties; _ } as assets) =
     let color = Card.Property.color card in
     let set =
-      match Properties.find_opt color properties with
+      (match Properties.find_opt color properties with
       | Some set -> set
-      | None ->
-          Card.Property.Set.create () |> Card.Property.Set.add_property card
+      | None -> Card.Property.Set.create ())
+      |> Card.Property.Set.add_property card
     in
     { assets with properties = Properties.add color set properties }
 
@@ -52,3 +62,7 @@ let add_property property player =
 
 let add_money money player =
   { player with assets = Assets.add_money money player.assets }
+
+let remove_from_hand index player =
+  let card, hand = Hand.remove_card index player.hand in
+  (card, { player with hand })

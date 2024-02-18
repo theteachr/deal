@@ -47,18 +47,28 @@ let start_turn { table = player, opponents; deck; turn; _ } =
   let table = (player, opponents) in
   { table; deck; turn = turn + 1; state = State.start }
 
+let pass game = { game with table = Table.turn game.table } |> start_turn
+
 let play ({ table = player, opponents; state; _ } as game : t) : t =
-  let chosen_card =
-    match state.choosing with Hand i -> List.nth player.hand i
+  let card, player =
+    match state.choosing with Hand i -> Player.remove_from_hand i player
   in
   let player =
-    match chosen_card with
+    match card with
     | Property card -> Player.add_property card player
     | Money card -> Player.add_money card player
     | Action _ -> failwith "todo: play action card"
     | Rent _ -> failwith "todo: play rent card"
   in
-  { game with table = Table.turn (player, opponents) } |> start_turn
+  let table = (player, opponents) in
+  if state.cards_played = 2 then
+    { game with table = Table.turn table } |> start_turn
+  else
+    {
+      game with
+      table;
+      state = { state with cards_played = state.cards_played + 1 };
+    }
 
 let running { deck; _ } = not (Deck.is_empty deck)
 
