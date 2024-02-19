@@ -158,7 +158,7 @@ type t =
 let property color name = Property (Property.simple color name)
 let money value = Money (Money.Money value)
 let action a = Action a
-let rent colors (value : int) = Rent (Rent.dual colors value)
+let rent colors value = Rent (Rent.dual colors value)
 let wild_rent = Rent Rent.wild
 
 let display = function

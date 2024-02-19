@@ -24,8 +24,7 @@ let view Game.{ table = player, _; deck; state; _ } =
                Printf.sprintf "%s %s" bullet (Card.display card))
         |> String.concat "\n"
   in
-  let view_assets (player : Player.t) =
-    let Player.Assets.{ bank; properties } = player.assets in
+  let view_assets Player.{ assets = { bank; properties }; _ } =
     let view_bank =
       bank
       |> List.map (function
