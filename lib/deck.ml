@@ -92,9 +92,10 @@ let default =
 (* Taken from https://stackoverflow.com/a/15095713 *)
 let shuffle deck =
   Random.self_init ();
-  let nd = List.map (fun card -> (Random.bits (), card)) deck in
-  let sond = List.sort compare nd in
-  List.map snd sond
+  deck
+  |> List.map (fun card -> (Random.bits (), card))
+  |> List.sort compare
+  |> List.map snd
 
 let draw (n : int) (deck : t) : Card.t list * t =
   let rec draw_n n drawn = function
