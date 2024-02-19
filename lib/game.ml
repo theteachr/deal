@@ -16,6 +16,9 @@ module State = struct
   }
 
   let start = { cards_played = 0; choosing = Hand 0 }
+
+  (* XXX *)
+  let reset_index state = { state with choosing = Hand 0 }
 end
 
 type t = {
@@ -60,14 +63,14 @@ let play ({ table = player, opponents; state; _ } as game : t) : t =
     | Action _ -> failwith "todo: play action card"
     | Rent _ -> failwith "todo: play rent card"
   in
-  let table = (player, opponents) in
-  if state.cards_played = 2 then
-    { game with table = Table.turn table } |> start_turn
+  let cards_played = state.cards_played + 1 in
+  if state.cards_played = 3 then
+    start_turn { game with table = Table.turn (player, opponents) }
   else
     {
       game with
-      table;
-      state = { state with cards_played = state.cards_played + 1 };
+      table = (player, opponents);
+      state = State.reset_index { state with cards_played };
     }
 
 let running { deck; _ } = not (Deck.is_empty deck)
