@@ -52,7 +52,7 @@ let start_turn { table = player, opponents; deck; turn; _ } =
 
 let pass game = { game with table = Table.turn game.table } |> start_turn
 
-let play ({ table = player, opponents; state; _ } as game : t) : t =
+let play ({ table = player, opponents; state; _ } as game) =
   let card, player =
     match state.choosing with Hand i -> Player.remove_from_hand i player
   in
