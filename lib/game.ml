@@ -16,9 +16,6 @@ module State = struct
   }
 
   let start = { cards_played = 0; choosing = Hand 0 }
-
-  (* XXX *)
-  let reset_index state = { state with choosing = Hand 0 }
 end
 
 type t = {
@@ -47,14 +44,15 @@ let start_turn { table = player, opponents; deck; turn; _ } =
   let n = if Player.empty_hand player then 5 else 2 in
   let cards, deck = Deck.draw n deck in
   let player = Player.update_hand player cards in
-  let table = (player, opponents) in
-  { table; deck; turn = turn + 1; state = State.start }
+  { table = (player, opponents); turn = turn + 1; state = State.start; deck }
 
 let pass game = { game with table = Table.turn game.table } |> start_turn
 
-let play ({ table = player, opponents; state; _ } as game) =
+let play
+    ({ table = player, opponents; state = { choosing; cards_played }; _ } as
+     game) =
   let card, player =
-    match state.choosing with Hand i -> Player.remove_from_hand i player
+    match choosing with Hand i -> Player.remove_from_hand i player
   in
   let player =
     match card with
@@ -63,15 +61,10 @@ let play ({ table = player, opponents; state; _ } as game) =
     | Action _ -> failwith "todo: play action card"
     | Rent _ -> failwith "todo: play rent card"
   in
-  let cards_played = state.cards_played + 1 in
+  let state = State.{ cards_played = cards_played + 1; choosing = Hand 0 } in
   if state.cards_played = 3 then
     start_turn { game with table = Table.turn (player, opponents) }
-  else
-    {
-      game with
-      table = (player, opponents);
-      state = State.reset_index { state with cards_played };
-    }
+  else { game with table = (player, opponents); state }
 
 let running { deck; _ } = not (Deck.is_empty deck)
 
