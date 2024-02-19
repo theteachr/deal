@@ -14,7 +14,7 @@ let update event game =
       (Game.choose_from_hand game Prev, Command.Noop)
   | _ -> (game, Command.Noop)
 
-let view Game.{ table = player, _; deck; turn; state } =
+let view Game.{ table = player, _; deck; state; _ } =
   let view_state =
     match state.choosing with
     | Game.State.Hand selected ->
@@ -56,24 +56,23 @@ let view Game.{ table = player, _; deck; turn; state } =
                (Color.display color) property_names buildings)
       |> String.concat "\n"
     in
-    Format.sprintf {|
-%s
-
-%s
-|} view_bank view_properties
+    Format.sprintf "%s\n\n%s" view_bank view_properties
   in
   Format.sprintf
     {|
+%s is playing [can play %d more card(s)].
 
-%s is playing (%d) [%d].
+---- Hand -------
 
 %s
+
+---- Assets -----
 
 %s
 
 %d card(s) in the deck.
-  |}
-    player.name turn state.cards_played view_state (view_assets player)
+|}
+    player.name (3 - state.cards_played) view_state (view_assets player)
     (Deck.count deck)
 
 let deal = Minttea.app ~init ~update ~view ()
