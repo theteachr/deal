@@ -64,6 +64,9 @@ module Action = struct
 end
 
 module Money = struct
+  (* TODO: Rent Cards in the bank
+     Rent Cards can also be banked. Decide whether to add a variant here or
+     move the [Rent] module inside [Action]. *)
   type t =
     | Money of int
     | Action of Action.t
@@ -106,6 +109,9 @@ module Property = struct
     | Wild _ -> Printf.sprintf "(0) Wild Property"
 
   module Set = struct
+    (* FIXME: Invalid state
+       [([], [Action.House])] is an invalid state. We can't have buildings on
+       top of incomplete sets. (GADT?) *)
     type nonrec t = t list * Action.building list
 
     let create () = ([], [])
