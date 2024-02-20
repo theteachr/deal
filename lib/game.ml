@@ -68,10 +68,20 @@ let play
 
 let running { deck; _ } = not (Deck.is_empty deck)
 
-let create players =
+let start players =
   let table =
     match players with
     | current :: opponents -> (current, opponents)
     | [] -> failwith "no players"
   in
-  { table; deck = Deck.(shuffle default); turn = 0; state = State.start }
+  let deck = Deck.(shuffle default) in
+  let rec distribute count ((player, rest) as table) deck =
+    (* Emulate the real way of distributing the cards? *)
+    if count = 0 then (table, deck)
+    else
+      let cards, deck = Deck.draw 5 deck in
+      let player = Player.update_hand player cards in
+      distribute (count - 1) (Table.turn (player, rest)) deck
+  in
+  let table, deck = distribute (List.length players) table deck in
+  { table; deck; turn = 0; state = State.start }

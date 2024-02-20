@@ -61,7 +61,7 @@ let view Game.{ table = player, _; deck; state; _ } =
     {|
 %s is playing [can play %d more card(s)].
 
----- Hand -------
+---- Hand (%d) -------
 
 %s
 
@@ -71,8 +71,8 @@ let view Game.{ table = player, _; deck; state; _ } =
 
 %d card(s) in the deck.
 |}
-    player.name (3 - state.cards_played) view_state (view_assets player)
-    (Deck.count deck)
+    player.name (3 - state.cards_played) (List.length player.hand) view_state
+    (view_assets player) (Deck.count deck)
 
 let deal = Minttea.app ~init ~update ~view ()
 
@@ -81,5 +81,5 @@ let () =
     [ "theteachr"; "procrastination"; "oat"; "patate" ]
     |> List.map Player.create
   in
-  let game = Game.create players in
+  let game = Game.start players in
   Minttea.start deal ~initial_model:(Game.start_turn game)

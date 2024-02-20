@@ -97,13 +97,13 @@ let shuffle deck =
   |> List.sort compare
   |> List.map snd
 
-let draw (n : int) (deck : t) : Card.t list * t =
-  let rec draw_n n drawn = function
+let draw n deck =
+  let rec pop n drawn = function
     | deck when n = 0 -> (drawn, deck)
     | [] as empty -> (drawn, empty)
-    | card :: deck -> draw_n (n - 1) (card :: drawn) deck
+    | card :: deck -> pop (n - 1) (card :: drawn) deck
   in
-  draw_n n [] deck
+  pop n [] deck
 
 let count = List.length
 let is_empty = List.is_empty
