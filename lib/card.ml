@@ -50,6 +50,8 @@ module Action = struct
     | Pass_go -> 1
     | Sly_deal -> 3
 
+  let building_rent = function Hotel -> 4 | House -> 3
+
   let name = function
     | Birthday -> "BIRTHDAY"
     | Debt_collector -> "DEBT COLLECTOR"
@@ -110,9 +112,25 @@ module Property = struct
 
   module Set = struct
     (* FIXME: Invalid state
-       [([], [Action.House])] is an invalid state. We can't have buildings on
-       top of incomplete sets. (GADT?) *)
+       [ ([], [ Action.House ]) ] is an invalid state. We can't have buildings
+       on top of incomplete sets. (GADT?) *)
+
+    (* FIXME: Invalid state
+       [ ([ Simple (Color.Blue, "PARK PLACE"), Wild Color.Black ], []) ] can't
+       happen. *)
     type nonrec t = t list * Action.building list
+
+    let rents = function
+      | Color.Black -> [| 1; 2; 3; 4 |]
+      | Blue -> [| 3; 8 |]
+      | Brown -> [| 1; 2 |]
+      | Green -> [| 2; 4; 7 |]
+      | Magenta -> [| 1; 2; 4 |]
+      | Orange -> [| 1; 3; 5 |]
+      | Red -> [| 2; 3; 6 |]
+      | Sky_blue -> [| 1; 2; 3 |]
+      | Turquoise -> [| 1; 2 |]
+      | Yellow -> [| 2; 4; 6 |]
 
     let create () = ([], [])
 

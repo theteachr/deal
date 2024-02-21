@@ -19,6 +19,7 @@ module Bank = struct
   type t = Card.Money.t list [@@deriving show]
 
   let empty = []
+  let value cards = cards |> List.map Card.Money.value |> List.fold_left ( + ) 0
 end
 
 module Assets = struct
@@ -42,6 +43,15 @@ module Assets = struct
     { assets with properties = Properties.add color set properties }
 
   let empty = { bank = Bank.empty; properties = Properties.empty }
+
+  let rent color (properties, buildings) =
+    let property_rent =
+      (Card.Property.Set.rents color).(List.length properties - 1)
+    in
+    let buildings_rent =
+      buildings |> List.map Card.Action.building_rent |> List.fold_left ( + ) 0
+    in
+    property_rent + buildings_rent
 end
 
 type t = {
