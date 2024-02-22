@@ -54,7 +54,7 @@ let next ({ table = player, opponents; deck; turn; _ } as game) =
     game with
     table = (player, opponents);
     turn = turn + 1;
-    state = { game.state with cards_played = 0; choosing = Hand; index = 0 };
+    state = State.reset game.state;
     deck;
   }
 
