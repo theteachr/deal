@@ -8,10 +8,8 @@ let update event game =
   | Event.KeyDown Escape -> (game, Command.Quit)
   | Event.KeyDown Enter -> (Game.play game, Command.Noop)
   | Event.KeyDown (Key "p") -> (Game.pass game, Command.Noop)
-  | Event.KeyDown (Key "j" | Down) ->
-      (Game.choose_from_hand game Next, Command.Noop)
-  | Event.KeyDown (Key "k" | Up) ->
-      (Game.choose_from_hand game Prev, Command.Noop)
+  | Event.KeyDown (Key "j" | Down) -> (Game.select_next game Next, Command.Noop)
+  | Event.KeyDown (Key "k" | Up) -> (Game.select_next game Prev, Command.Noop)
   | _ -> (game, Command.Noop)
 
 let view_bank bank =
@@ -23,8 +21,7 @@ let view_bank bank =
              (Card.Action.name card))
   |> String.concat "\n"
 
-let view_hand hand choosing =
-  let selected = match choosing with Game.State.Hand i | Discarding i -> i in
+let view_hand hand selected =
   let view_card i card =
     let bullet = if i = selected then ">" else " " in
     Printf.sprintf "%s %s" bullet (Card.display card)
@@ -51,9 +48,18 @@ let view_properties properties =
   |> String.concat "\n"
 
 let view Game.{ table = player, _; deck; state; _ } =
+  let current_player_status =
+    match state.choosing with
+    | Hand ->
+        Printf.sprintf "%s is playing [can play %d more card(s)]." player.name
+          (3 - state.cards_played)
+    | Discarding ->
+        Printf.sprintf "%s has to discard %d." player.name
+          (List.length player.hand - 7)
+  in
   Format.sprintf
     {|
-%s is playing [can play %d more card(s)].
+%s
 
 Hand (%d):
 
@@ -71,8 +77,8 @@ Properties:
 
 %s
 |}
-    player.name (3 - state.cards_played) (List.length player.hand)
-    (view_hand player.hand state.choosing)
+    current_player_status (List.length player.hand)
+    (view_hand player.hand state.index)
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)
     (Deck.count deck) state.message
@@ -81,6 +87,6 @@ let deal = Minttea.app ~init ~update ~view ()
 
 let () =
   let players =
-    [ "theteachr"; "j"; "oat"; "patate" ] |> List.map Player.create
+    List.map Player.create [ "theteachr"; "j"; "oat"; "patate"; "def" ]
   in
   Minttea.start deal ~initial_model:(Game.start players)

@@ -11,16 +11,18 @@ end
 
 module State = struct
   type choosing =
-    | Hand of int
-    | Discarding of int
+    | Hand
+    | Discarding
 
   type t = {
     cards_played : int;
     choosing : choosing;
     message : string;
+    index : int;
   }
 
-  let start = { cards_played = 0; choosing = Hand 0; message = "" }
+  let init = { cards_played = 0; choosing = Hand; message = ""; index = 0 }
+  let reset state = { state with cards_played = 0; choosing = Hand; index = 0 }
 end
 
 type t = {
@@ -35,17 +37,13 @@ type choose_direction =
   | Next
   | Prev
 
-let choose_from_hand ({ table = player, _; state; _ } as game) direction =
+let select_next ({ table = player, _; state; _ } as game) direction =
   let length = List.length player.hand in
   let get_index i =
     let x = match direction with Next -> i + 1 | Prev -> i + length - 1 in
     x mod length
   in
-  let choosing =
-    match state.choosing with
-    | State.Hand i | Discarding i -> State.Hand (get_index i)
-  in
-  { game with state = { state with choosing } }
+  { game with state = { state with index = get_index state.index } }
 
 let next ({ table = player, opponents; deck; turn; _ } as game) =
   let n = if Player.empty_hand player then 5 else 2 in
@@ -56,7 +54,7 @@ let next ({ table = player, opponents; deck; turn; _ } as game) =
     game with
     table = (player, opponents);
     turn = turn + 1;
-    state = State.start;
+    state = { game.state with cards_played = 0; choosing = Hand; index = 0 };
     deck;
   }
 
@@ -64,19 +62,13 @@ let current_player { table = player, _; _ } = player
 
 let pass game =
   let Player.{ hand; _ } = current_player game in
-  if List.length hand > 7 then
-    {
-      game with
-      state =
-        { game.state with choosing = Discarding 0; message = "discarding" };
-    }
-  else
-    next
-      {
-        game with
-        table = Table.turn game.table;
-        state = { game.state with message = "" };
-      }
+  let excess = List.length hand - 7 in
+  if excess > 0 then
+    let message =
+      Printf.sprintf "Excess cards in your hand. You need to discard %d." excess
+    in
+    { game with state = { game.state with choosing = Discarding; message } }
+  else next { game with table = Table.turn game.table }
 
 let play_card card game =
   let player =
@@ -92,17 +84,16 @@ let play_card card game =
     state =
       {
         cards_played = game.state.cards_played + 1;
-        choosing = Hand 0;
+        choosing = Hand;
         message =
           Printf.sprintf "%s played [%s]." player.name (Card.display card);
+        index = 0;
       };
   }
 
-let discard game = game
-
 let play game =
   match game.state.choosing with
-  | Hand i ->
+  | Hand ->
       if game.state.cards_played = 3 then
         {
           game with
@@ -113,18 +104,30 @@ let play game =
             };
         }
       else
-        let card, player = Player.remove_from_hand i (current_player game) in
+        let card, player =
+          Player.remove_from_hand game.state.index (current_player game)
+        in
         play_card card { game with table = Table.update player game.table }
-  | Discarding i ->
+  | Discarding ->
       let player = current_player game in
-      if List.length player.hand <= 7 then pass game
-      else
-        let card, player = Player.remove_from_hand i player in
+      let card, player = Player.remove_from_hand game.state.index player in
+      let game =
         {
           game with
           discarded = card :: game.discarded;
           table = Table.update player game.table;
+          state =
+            {
+              game.state with
+              message =
+                Printf.sprintf "%s discarded [%s]." player.name
+                  (Card.display card);
+              choosing = Discarding;
+              index = 0;
+            };
         }
+      in
+      if List.length player.hand = 7 then pass game else game
 
 let running { deck; _ } = not (Deck.is_empty deck)
 
@@ -144,4 +147,4 @@ let start players =
       distribute (count - 1) (Table.turn (player, rest)) deck
   in
   let table, deck = distribute (List.length players) table deck in
-  next { table; deck; turn = 0; state = State.start; discarded = [] }
+  next { table; deck; turn = 0; state = State.init; discarded = [] }
