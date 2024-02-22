@@ -22,7 +22,7 @@ module State = struct
   }
 
   let init = { cards_played = 0; choosing = Hand; message = ""; index = 0 }
-  let reset state = { state with cards_played = 0; choosing = Hand; index = 0 }
+  let reset state = { init with message = state.message }
 end
 
 type t = {
