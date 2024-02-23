@@ -15,8 +15,8 @@
 
 (package
  (name deal)
- (synopsis "Monopoly Deal Online")
- (description "An online multiplayer port of the popular card game: Monopoly Deal")
+ (synopsis "Monopoly Deal")
+ (description "An implementation of the popular card game - Monopoly Deal, in OCaml.")
  (depends ocaml dune minttea)
  (tags
   (game "monopoly deal" multiplayer)))
