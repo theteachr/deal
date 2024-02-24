@@ -52,6 +52,11 @@ module Assets = struct
       buildings |> List.map Card.Action.building_rent |> List.fold_left ( + ) 0
     in
     property_rent + buildings_rent
+
+  let full_sets { properties; _ } =
+    properties
+    |> Properties.bindings
+    |> List.filter (fun (_, set) -> Card.Property.Set.complete set)
 end
 
 type t = {

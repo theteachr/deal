@@ -110,26 +110,38 @@ let play_card card game =
       };
   }
 
-let update game =
-  match game.state.phase with
-  | Play ->
-      if game.state.cards_played = 3 then
-        {
-          game with
-          state =
-            {
-              game.state with
-              message = "Can't play any more cards in this turn.";
-            };
-        }
-      else
-        let card, player =
-          Player.remove_from_hand game.state.index (current_player game)
-        in
-        play_card card { game with table = Table.update player game.table }
-  | Discard -> discard game
+let over { table = { assets; _ }, _; _ } =
+  assets |> Player.Assets.full_sets |> List.length >= 3
 
-let running { deck; _ } = not (Deck.is_empty deck)
+let update game =
+  if game |> over then
+    {
+      game with
+      state =
+        {
+          game.state with
+          message =
+            Printf.sprintf "Game over. %s won." (current_player game).name;
+        };
+    }
+  else
+    match game.state.phase with
+    | Play ->
+        if game.state.cards_played = 3 then
+          {
+            game with
+            state =
+              {
+                game.state with
+                message = "Can't play any more cards in this turn.";
+              };
+          }
+        else
+          let card, player =
+            Player.remove_from_hand game.state.index (current_player game)
+          in
+          play_card card { game with table = Table.update player game.table }
+    | Discard -> discard game
 
 let start players =
   let table =

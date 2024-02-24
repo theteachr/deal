@@ -144,6 +144,12 @@ module Property = struct
 
     let add_building building (properties, buildings) =
       (properties, building :: buildings)
+
+    let complete (properties, _) =
+      match properties with
+      | [] -> false
+      | property :: _ ->
+          List.length properties = Array.length (rents @@ color property)
   end
 
   let simple color name = Simple (color, name)
