@@ -6,20 +6,13 @@ let init _ = Command.Seq [ Enter_alt_screen; Hide_cursor ]
 let update event game =
   match event with
   | Event.KeyDown Escape -> (game, Command.Quit)
-  | Event.KeyDown Enter -> (Game.play game, Command.Noop)
+  | Event.KeyDown Enter -> (Game.update game, Command.Noop)
   | Event.KeyDown (Key "p") -> (Game.pass game, Command.Noop)
   | Event.KeyDown (Key "j" | Down) -> (Game.select_next game Next, Command.Noop)
   | Event.KeyDown (Key "k" | Up) -> (Game.select_next game Prev, Command.Noop)
   | _ -> (game, Command.Noop)
 
-let view_bank bank =
-  bank
-  |> List.map (function
-       | Card.Money.Money value -> Printf.sprintf "(%d) Money" value
-       | Card.Money.Action card ->
-           Printf.sprintf "(%d) %s" (Card.Action.value card)
-             (Card.Action.name card))
-  |> String.concat "\n"
+let view_bank bank = bank |> List.map Card.Money.display |> String.concat "\n"
 
 let view_hand hand selected =
   let view_card i card =
@@ -49,11 +42,11 @@ let view_properties properties =
 
 let view Game.{ table = player, _; deck; state; _ } =
   let current_player_status =
-    match state.choosing with
-    | Hand ->
+    match state.phase with
+    | Play ->
         Printf.sprintf "%s is playing [can play %d more card(s)]." player.name
           (3 - state.cards_played)
-    | Discarding ->
+    | Discard ->
         Printf.sprintf "%s has to discard %d." player.name
           (List.length player.hand - 7)
   in

@@ -10,18 +10,18 @@ module Table = struct
 end
 
 module State = struct
-  type choosing =
-    | Hand
-    | Discarding
+  type phase =
+    | Play
+    | Discard
 
   type t = {
     cards_played : int;
-    choosing : choosing;
+    phase : phase;
     message : string;
     index : int;
   }
 
-  let init = { cards_played = 0; choosing = Hand; message = ""; index = 0 }
+  let init = { cards_played = 0; phase = Play; message = ""; index = 0 }
   let reset state = { init with message = state.message }
 end
 
@@ -67,8 +67,27 @@ let pass game =
     let message =
       Printf.sprintf "Excess cards in your hand. You need to discard %d." excess
     in
-    { game with state = { game.state with choosing = Discarding; message } }
+    { game with state = { game.state with phase = Discard; message } }
   else next { game with table = Table.turn game.table }
+
+let discard ({ table = player, _; _ } as game) =
+  let card, player = Player.remove_from_hand game.state.index player in
+  let game =
+    {
+      game with
+      discarded = card :: game.discarded;
+      table = Table.update player game.table;
+      state =
+        {
+          game.state with
+          message =
+            Printf.sprintf "%s discarded [%s]." player.name (Card.display card);
+          phase = Discard;
+          index = 0;
+        };
+    }
+  in
+  if List.length player.hand = 7 then pass game else game
 
 let play_card card game =
   let player =
@@ -84,16 +103,16 @@ let play_card card game =
     state =
       {
         cards_played = game.state.cards_played + 1;
-        choosing = Hand;
+        phase = Play;
         message =
           Printf.sprintf "%s played [%s]." player.name (Card.display card);
         index = 0;
       };
   }
 
-let play game =
-  match game.state.choosing with
-  | Hand ->
+let update game =
+  match game.state.phase with
+  | Play ->
       if game.state.cards_played = 3 then
         {
           game with
@@ -108,26 +127,7 @@ let play game =
           Player.remove_from_hand game.state.index (current_player game)
         in
         play_card card { game with table = Table.update player game.table }
-  | Discarding ->
-      let player = current_player game in
-      let card, player = Player.remove_from_hand game.state.index player in
-      let game =
-        {
-          game with
-          discarded = card :: game.discarded;
-          table = Table.update player game.table;
-          state =
-            {
-              game.state with
-              message =
-                Printf.sprintf "%s discarded [%s]." player.name
-                  (Card.display card);
-              choosing = Discarding;
-              index = 0;
-            };
-        }
-      in
-      if List.length player.hand = 7 then pass game else game
+  | Discard -> discard game
 
 let running { deck; _ } = not (Deck.is_empty deck)
 

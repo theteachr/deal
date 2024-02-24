@@ -77,6 +77,11 @@ module Money = struct
   let value = function
     | Money value -> value
     | Action action -> Action.value action
+
+  let display = function
+    | Money value -> Printf.sprintf "(%d) Money" value
+    | Action action ->
+        Printf.sprintf "(%d) %s" (Action.value action) (Action.name action)
 end
 
 module Property = struct
