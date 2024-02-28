@@ -145,7 +145,7 @@ module Property = struct
     let add_building building (properties, buildings) =
       (properties, building :: buildings)
 
-    let complete (properties, _) =
+    let is_full (properties, _) =
       match properties with
       | [] -> false
       | property :: _ ->

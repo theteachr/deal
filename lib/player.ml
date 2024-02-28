@@ -53,10 +53,11 @@ module Assets = struct
     in
     property_rent + buildings_rent
 
-  let full_sets { properties; _ } =
+  let full_property_sets { properties; _ } =
     properties
     |> Properties.bindings
-    |> List.filter (fun (_, set) -> Card.Property.Set.complete set)
+    |> List.map snd
+    |> List.filter Card.Property.Set.is_full
 end
 
 type t = {

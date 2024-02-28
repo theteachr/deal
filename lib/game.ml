@@ -114,7 +114,7 @@ let play_card card game =
   }
 
 let over { table = { assets; _ }, _; _ } =
-  assets |> Player.Assets.full_sets |> List.length >= 3
+  assets |> Player.Assets.full_property_sets |> List.length >= 3
 
 let update game =
   if game |> over then
