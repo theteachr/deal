@@ -31,11 +31,16 @@ let view_properties properties =
 let view_state (state : Game.State.t) (player : Player.t) =
   match state.phase with
   | Play ->
-      if state.cards_played = 3 then
-        Printf.sprintf "%s has played all cards in the turn." player.name
-      else
-        Printf.sprintf "%s is playing [can play %d more card(s)]." player.name
-          (3 - state.cards_played)
+      let open Printf in
+      let cards_played =
+        state.cards_played |> List.map Card.display |> String.concat ", "
+      in
+      let header =
+        if List.length state.cards_played = 3 then
+          sprintf "%s has played all cards in the turn." player.name
+        else sprintf "%s is playing." player.name
+      in
+      sprintf "%s\nCards turned: [%s]" header cards_played
   | Discard ->
       Printf.sprintf "%s has to discard %d." player.name
         (List.length player.hand - 7)
@@ -60,6 +65,8 @@ Properties:
 %s
 |}
     (view_state state player)
+    (* TODO: Don't view selectable hand when the player has already played
+       3 cards. *)
     (view_hand player.hand state.index)
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)

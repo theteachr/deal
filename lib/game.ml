@@ -15,13 +15,13 @@ module State = struct
     | Discard
 
   type t = {
-    cards_played : int;
+    cards_played : Card.t list;
     phase : phase;
     message : string;
     index : int;
   }
 
-  let init = { cards_played = 0; phase = Play; message = ""; index = 0 }
+  let init = { cards_played = []; phase = Play; message = ""; index = 0 }
   let reset state = { init with message = state.message }
 end
 
@@ -105,7 +105,7 @@ let play_card card game =
     table = Table.update player game.table;
     state =
       {
-        cards_played = game.state.cards_played + 1;
+        cards_played = card :: game.state.cards_played;
         phase = Play;
         message =
           Printf.sprintf "%s played [%s]." player.name (Card.display card);
@@ -130,7 +130,7 @@ let update game =
   else
     match game.state.phase with
     | Play ->
-        if game.state.cards_played = 3 then
+        if List.length game.state.cards_played = 3 then
           {
             game with
             state =
