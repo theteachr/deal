@@ -10,18 +10,18 @@ module Table = struct
 end
 
 module State = struct
-  type choosing =
-    | Hand
-    | Discarding
+  type phase =
+    | Play
+    | Discard
 
   type t = {
     cards_played : int;
-    choosing : choosing;
+    phase : phase;
     message : string;
     index : int;
   }
 
-  let init = { cards_played = 0; choosing = Hand; message = ""; index = 0 }
+  let init = { cards_played = 0; phase = Play; message = ""; index = 0 }
   let reset state = { init with message = state.message }
 end
 
@@ -33,17 +33,20 @@ type t = {
   discarded : Card.t list;
 }
 
-type choose_direction =
-  | Next
-  | Prev
+let next_index i l = (i + 1) mod List.length l
+let prev_index i l = (i + List.length l - 1) mod List.length l
 
-let select_next ({ table = player, _; state; _ } as game) direction =
-  let length = List.length player.hand in
-  let get_index i =
-    let x = match direction with Next -> i + 1 | Prev -> i + length - 1 in
-    x mod length
-  in
-  { game with state = { state with index = get_index state.index } }
+let select_next ({ table = player, _; state; _ } as game) =
+  {
+    game with
+    state = { state with index = next_index state.index player.hand };
+  }
+
+let select_prev ({ table = player, _; state; _ } as game) =
+  {
+    game with
+    state = { state with index = prev_index state.index player.hand };
+  }
 
 let next ({ table = player, opponents; deck; turn; _ } as game) =
   let n = if Player.empty_hand player then 5 else 2 in
@@ -67,8 +70,27 @@ let pass game =
     let message =
       Printf.sprintf "Excess cards in your hand. You need to discard %d." excess
     in
-    { game with state = { game.state with choosing = Discarding; message } }
+    { game with state = { game.state with phase = Discard; message } }
   else next { game with table = Table.turn game.table }
+
+let discard ({ table = player, _; _ } as game) =
+  let card, player = Player.remove_from_hand game.state.index player in
+  let game =
+    {
+      game with
+      discarded = card :: game.discarded;
+      table = Table.update player game.table;
+      state =
+        {
+          game.state with
+          message =
+            Printf.sprintf "%s discarded [%s]." player.name (Card.display card);
+          phase = Discard;
+          index = 0;
+        };
+    }
+  in
+  if List.length player.hand = 7 then pass game else game
 
 let play_card card game =
   let player =
@@ -84,52 +106,45 @@ let play_card card game =
     state =
       {
         cards_played = game.state.cards_played + 1;
-        choosing = Hand;
+        phase = Play;
         message =
           Printf.sprintf "%s played [%s]." player.name (Card.display card);
         index = 0;
       };
   }
 
-let play game =
-  match game.state.choosing with
-  | Hand ->
-      if game.state.cards_played = 3 then
-        {
-          game with
-          state =
-            {
-              game.state with
-              message = "Can't play any more cards in this turn.";
-            };
-        }
-      else
-        let card, player =
-          Player.remove_from_hand game.state.index (current_player game)
-        in
-        play_card card { game with table = Table.update player game.table }
-  | Discarding ->
-      let player = current_player game in
-      let card, player = Player.remove_from_hand game.state.index player in
-      let game =
-        {
-          game with
-          discarded = card :: game.discarded;
-          table = Table.update player game.table;
-          state =
-            {
-              game.state with
-              message =
-                Printf.sprintf "%s discarded [%s]." player.name
-                  (Card.display card);
-              choosing = Discarding;
-              index = 0;
-            };
-        }
-      in
-      if List.length player.hand = 7 then pass game else game
+let over { table = { assets; _ }, _; _ } =
+  assets |> Player.Assets.full_property_sets |> List.length >= 3
 
-let running { deck; _ } = not (Deck.is_empty deck)
+let update game =
+  if game |> over then
+    {
+      game with
+      state =
+        {
+          game.state with
+          message =
+            Printf.sprintf "Game over. %s won." (current_player game).name;
+        };
+    }
+  else
+    match game.state.phase with
+    | Play ->
+        if game.state.cards_played = 3 then
+          {
+            game with
+            state =
+              {
+                game.state with
+                message = "Can't play any more cards in this turn.";
+              };
+          }
+        else
+          let card, player =
+            Player.remove_from_hand game.state.index (current_player game)
+          in
+          play_card card { game with table = Table.update player game.table }
+    | Discard -> discard game
 
 let start players =
   let table =

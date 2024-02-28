@@ -77,6 +77,11 @@ module Money = struct
   let value = function
     | Money value -> value
     | Action action -> Action.value action
+
+  let display = function
+    | Money value -> Printf.sprintf "(%d) Money" value
+    | Action action ->
+        Printf.sprintf "(%d) %s" (Action.value action) (Action.name action)
 end
 
 module Property = struct
@@ -139,6 +144,12 @@ module Property = struct
 
     let add_building building (properties, buildings) =
       (properties, building :: buildings)
+
+    let is_full (properties, _) =
+      match properties with
+      | [] -> false
+      | property :: _ ->
+          List.length properties = Array.length (rents @@ color property)
   end
 
   let simple color name = Simple (color, name)

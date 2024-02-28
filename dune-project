@@ -17,6 +17,6 @@
  (name deal)
  (synopsis "Monopoly Deal")
  (description "An implementation of the popular card game - Monopoly Deal, in OCaml.")
- (depends ocaml dune minttea)
+ (depends ocaml dune)
  (tags
   (game "monopoly deal" multiplayer)))
