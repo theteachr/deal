@@ -1,4 +1,4 @@
 (executable
  (public_name deal)
  (name main)
- (libraries deal minttea))
+ (libraries deal))

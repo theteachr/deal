@@ -1,16 +1,4 @@
 open Deal
-open Minttea
-
-let _init _ = Command.Seq [ Enter_alt_screen; Hide_cursor ]
-
-let _update event game =
-  match event with
-  | Event.KeyDown Escape -> (game, Command.Quit)
-  | Event.KeyDown Enter -> (Game.update game, Command.Noop)
-  | Event.KeyDown (Key "p") -> (Game.pass game, Command.Noop)
-  | Event.KeyDown (Key "j" | Down) -> (Game.select_next game, Command.Noop)
-  | Event.KeyDown (Key "k" | Up) -> (Game.select_next game, Command.Noop)
-  | _ -> (game, Command.Noop)
 
 let view_bank bank = bank |> List.map Card.Money.display |> String.concat "\n"
 
@@ -76,8 +64,6 @@ Properties:
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)
     (Deck.count deck) state.message
-
-let _deal = Minttea.app ~init:_init ~update:_update ~view ()
 
 let clear_screen () =
   let _ = Sys.command "clear" in

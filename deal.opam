@@ -12,7 +12,6 @@ bug-reports: "https://github.com/theteachr/deal/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.12"}
-  "minttea"
   "odoc" {with-doc}
 ]
 build: [
