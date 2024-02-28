@@ -1,9 +1,9 @@
 open Deal
 open Minttea
 
-let init _ = Command.Seq [ Enter_alt_screen; Hide_cursor ]
+let _init _ = Command.Seq [ Enter_alt_screen; Hide_cursor ]
 
-let update event game =
+let _update event game =
   match event with
   | Event.KeyDown Escape -> (game, Command.Quit)
   | Event.KeyDown Enter -> (Game.update game, Command.Noop)
@@ -76,10 +76,26 @@ Properties:
     (view_properties player.assets.properties)
     (Deck.count deck) state.message
 
-let deal = Minttea.app ~init ~update ~view ()
+let _deal = Minttea.app ~init:_init ~update:_update ~view ()
+
+let rec loop game =
+  (* TODO: Clear screen *)
+  print_endline (view game);
+  if Game.over game then ()
+  else
+    print_string "> ";
+    Stdlib.flush Stdlib.stdout;
+    match Scanf.scanf " %s" Fun.id with
+    | "q" -> "Game aborted." |> print_endline
+    | "j" -> Game.select_next game Next |> loop
+    | "k" -> Game.select_next game Prev |> loop
+    | "p" -> Game.pass game |> loop
+    | "play" -> Game.update game |> loop
+    | _ -> game |> loop
 
 let () =
   let players =
     List.map Player.create [ "theteachr"; "j"; "oat"; "patate"; "def" ]
   in
-  Minttea.start deal ~initial_model:(Game.start players)
+  loop (Game.start players)
+(* Minttea.start deal ~initial_model:(Game.start players) *)
