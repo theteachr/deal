@@ -4,62 +4,40 @@ let default =
   Card.
     [
       (* Property Cards *)
+      [ "Baltic Avenue"; "Mediterranean Avenue" ] |> List.map (property Brown);
+      [ "Broadwalk"; "Park Place" ] |> List.map (property Blue);
+      [ "North California Avenue"; "Pacific Avenue"; "Pennsylvania Avenue" ]
+      |> List.map (property Green);
+      [ "Connecticut Avenue"; "Oriental Avenue"; "Vermont Avenue" ]
+      |> List.map (property Sky_blue);
+      [ "New York Avenue"; "St. James Place"; "Tennessee Avenue" ]
+      |> List.map (property Orange);
+      [ "Virginia Avenue"; "St. Charles Place"; "States Avenue" ]
+      |> List.map (property Magenta);
       [
-        property Color.Brown "Baltic Avenue";
-        property Color.Brown "Mediterranean Avenue";
-      ];
-      [ property Color.Blue "Broadwalk"; property Color.Blue "Park Place" ];
-      [
-        property Color.Green "North California Avenue";
-        property Color.Green "Pacific Avenue";
-        property Color.Green "Pennsylvania Avenue";
-      ];
-      [
-        property Color.Sky_blue "Connecticut Avenue";
-        property Color.Sky_blue "Oriental Avenue";
-        property Color.Sky_blue "Vermont Avenue";
-      ];
-      [
-        property Color.Orange "New York Avenue";
-        property Color.Orange "St. James Place";
-        property Color.Orange "Tennessee Avenue";
-      ];
-      [
-        property Color.Magenta "Virginia Avenue";
-        property Color.Magenta "St. Charles Place";
-        property Color.Magenta "States Avenue";
-      ];
-      [
-        property Color.Black "Short Line";
-        property Color.Black "B. & O. Railroad";
-        property Color.Black "Reading Railroad";
-        property Color.Black "Pennsylvania Railroad";
-      ];
-      [
-        property Color.Red "Kentucky Avenue";
-        property Color.Red "Indiana Avenue";
-        property Color.Red "Illinois Avenue";
-      ];
-      [
-        property Color.Turquoise "Water Works";
-        property Color.Turquoise "Electric Company";
-      ];
-      [
-        property Color.Yellow "Ventnor Avenue";
-        property Color.Yellow "Marvin Avenue";
-        property Color.Yellow "Atlantic Avenue";
-      ];
-      (* Wild Cards *)
-      [
-        Property.dual Color.(Blue, Green) 4;
-        Property.dual Color.(Turquoise, Brown) 1;
-        Property.dual Color.(Green, Black) 4;
-        Property.dual Color.(Sky_blue, Black) 4;
-        Property.dual Color.(Turquoise, Black) 2;
+        "Short Line";
+        "B. & O. Railroad";
+        "Reading Railroad";
+        "Pennsylvania Railroad";
       ]
-      @ List.init 2 (Fun.const @@ Property.dual Color.(Orange, Magenta) 2)
-      @ List.init 2 (Fun.const @@ Property.dual Color.(Yellow, Red) 3)
-      @ List.init 2 (Fun.const @@ Property.wild Color.Blue)
+      |> List.map (property Black);
+      [ "Kentucky Avenue"; "Indiana Avenue"; "Illinois Avenue" ]
+      |> List.map (property Red);
+      [ "Water Works"; "Electric Company" ] |> List.map (property Turquoise);
+      [ "Ventnor Avenue"; "Marvin Avenue"; "Atlantic Avenue" ]
+      |> List.map (property Yellow);
+      (* Wild Cards *)
+      Property.
+        [
+          dual (Blue, Green) 4;
+          dual (Turquoise, Brown) 1;
+          dual (Green, Black) 4;
+          dual (Sky_blue, Black) 4;
+          dual (Turquoise, Black) 2;
+        ]
+      @ List.init 2 (Fun.const @@ Property.dual (Orange, Magenta) 2)
+      @ List.init 2 (Fun.const @@ Property.dual (Yellow, Red) 3)
+      @ List.init 2 (Fun.const @@ Property.wild Blue)
       |> List.map (fun card -> Property card);
       (* Money Cards *)
       List.init 2 (Fun.const @@ money 5);
@@ -81,15 +59,15 @@ let default =
       List.init 10 (Fun.const @@ action Pass_go);
       (* Rent Cards *)
       List.init 3 (Fun.const @@ wild_rent);
-      List.init 2 (Fun.const @@ rent Color.(Green, Blue) 1);
-      List.init 2 (Fun.const @@ rent Color.(Brown, Sky_blue) 1);
-      List.init 2 (Fun.const @@ rent Color.(Magenta, Orange) 1);
-      List.init 2 (Fun.const @@ rent Color.(Black, Turquoise) 1);
-      List.init 2 (Fun.const @@ rent Color.(Red, Yellow) 1);
+      List.init 2 (Fun.const @@ rent (Green, Blue) 1);
+      List.init 2 (Fun.const @@ rent (Brown, Sky_blue) 1);
+      List.init 2 (Fun.const @@ rent (Magenta, Orange) 1);
+      List.init 2 (Fun.const @@ rent (Black, Turquoise) 1);
+      List.init 2 (Fun.const @@ rent (Red, Yellow) 1);
     ]
   |> List.flatten
 
-(* Taken from https://stackoverflow.com/a/15095713 *)
+(* Taken from https://stackoverflow.com/a/15095713. *)
 let shuffle deck =
   Random.self_init ();
   deck
