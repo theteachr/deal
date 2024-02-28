@@ -78,20 +78,22 @@ Properties:
 
 let _deal = Minttea.app ~init:_init ~update:_update ~view ()
 
+let clear_screen () =
+  let _ = Sys.command "clear" in
+  ()
+
 let rec loop game =
-  (* TODO: Clear screen *)
+  clear_screen ();
   print_endline (view game);
-  if Game.over game then ()
-  else
-    print_string "> ";
-    Stdlib.flush Stdlib.stdout;
-    match Scanf.scanf " %s" Fun.id with
-    | "q" -> "Game aborted." |> print_endline
-    | "j" -> Game.select_next game Next |> loop
-    | "k" -> Game.select_next game Prev |> loop
-    | "p" -> Game.pass game |> loop
-    | "play" -> Game.update game |> loop
-    | _ -> game |> loop
+  if Game.over game then () else print_string "> ";
+  Stdlib.flush Stdlib.stdout;
+  match Scanf.scanf " %s" Fun.id with
+  | "q" -> "Game aborted." |> print_endline
+  | "j" -> Game.select_next game Next |> loop
+  | "k" -> Game.select_next game Prev |> loop
+  | "p" -> Game.pass game |> loop
+  | "play" -> Game.update game |> loop
+  | _ -> game |> loop
 
 let () =
   let players =
