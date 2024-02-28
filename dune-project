@@ -16,7 +16,7 @@
 (package
  (name deal)
  (synopsis "Monopoly Deal")
- (description "An implementation of the popular card game - Monopoly Deal, in OCaml.")
+ (description "An implementation of Monopoly Deal, a game of cards, in OCaml.")
  (depends ocaml dune)
  (tags
   (game "monopoly deal" multiplayer)))
