@@ -40,21 +40,22 @@ let view_properties properties =
   |> List.map view_set
   |> String.concat "\n"
 
-let view Game.{ table = player, _; deck; state; _ } =
-  let current_player_status =
-    match state.phase with
-    | Play ->
+let view_state (state : Game.State.t) (player : Player.t) =
+  match state.phase with
+  | Play ->
+      if state.cards_played = 3 then
+        Printf.sprintf "%s has played all cards in the turn." player.name
+      else
         Printf.sprintf "%s is playing [can play %d more card(s)]." player.name
           (3 - state.cards_played)
-    | Discard ->
-        Printf.sprintf "%s has to discard %d." player.name
-          (List.length player.hand - 7)
-  in
+  | Discard ->
+      Printf.sprintf "%s has to discard %d." player.name
+        (List.length player.hand - 7)
+
+let view Game.{ table = player, _; deck; state; _ } =
   Format.sprintf
     {|
 %s
-
-Hand (%d):
 
 %s
 
@@ -70,7 +71,7 @@ Properties:
 
 %s
 |}
-    current_player_status (List.length player.hand)
+    (view_state state player)
     (view_hand player.hand state.index)
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)
@@ -86,7 +87,7 @@ let rec loop game =
   clear_screen ();
   print_endline (view game);
   if Game.over game then () else print_string "> ";
-  Stdlib.flush Stdlib.stdout;
+  Stdlib.(flush stdout);
   match Scanf.scanf " %s" Fun.id with
   (* quit *)
   | "q" -> "Game aborted." |> print_endline
