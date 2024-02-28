@@ -33,17 +33,20 @@ type t = {
   discarded : Card.t list;
 }
 
-type choose_direction =
-  | Next
-  | Prev
+let next_index i l = (i + 1) mod List.length l
+let prev_index i l = (i + List.length l - 1) mod List.length l
 
-let select_next ({ table = player, _; state; _ } as game) direction =
-  let length = List.length player.hand in
-  let get_index i =
-    let x = match direction with Next -> i + 1 | Prev -> i + length - 1 in
-    x mod length
-  in
-  { game with state = { state with index = get_index state.index } }
+let select_next ({ table = player, _; state; _ } as game) =
+  {
+    game with
+    state = { state with index = next_index state.index player.hand };
+  }
+
+let select_prev ({ table = player, _; state; _ } as game) =
+  {
+    game with
+    state = { state with index = prev_index state.index player.hand };
+  }
 
 let next ({ table = player, opponents; deck; turn; _ } as game) =
   let n = if Player.empty_hand player then 5 else 2 in

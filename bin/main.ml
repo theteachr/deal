@@ -8,8 +8,8 @@ let _update event game =
   | Event.KeyDown Escape -> (game, Command.Quit)
   | Event.KeyDown Enter -> (Game.update game, Command.Noop)
   | Event.KeyDown (Key "p") -> (Game.pass game, Command.Noop)
-  | Event.KeyDown (Key "j" | Down) -> (Game.select_next game Next, Command.Noop)
-  | Event.KeyDown (Key "k" | Up) -> (Game.select_next game Prev, Command.Noop)
+  | Event.KeyDown (Key "j" | Down) -> (Game.select_next game, Command.Noop)
+  | Event.KeyDown (Key "k" | Up) -> (Game.select_next game, Command.Noop)
   | _ -> (game, Command.Noop)
 
 let view_bank bank = bank |> List.map Card.Money.display |> String.concat "\n"
@@ -88,11 +88,14 @@ let rec loop game =
   if Game.over game then () else print_string "> ";
   Stdlib.flush Stdlib.stdout;
   match Scanf.scanf " %s" Fun.id with
+  (* quit *)
   | "q" -> "Game aborted." |> print_endline
-  | "j" -> Game.select_next game Next |> loop
-  | "k" -> Game.select_next game Prev |> loop
-  | "p" -> Game.pass game |> loop
-  | "play" -> Game.update game |> loop
+  | "j" -> Game.select_next game |> loop
+  | "k" -> Game.select_prev game |> loop
+  (* finish turn *)
+  | "f" -> Game.pass game |> loop
+  (* play card *)
+  | "p" -> Game.update game |> loop
   | _ -> game |> loop
 
 let () =
