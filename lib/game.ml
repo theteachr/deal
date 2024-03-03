@@ -125,8 +125,8 @@ let play_card card game =
     | Card.Property card -> play_property card game
     | Money card -> play_money card game
     | Action Pass_go -> play_pass_go game
-    | Action _ -> failwith "todo: play action card"
-    | Rent _ -> failwith "todo: play rent card"
+    | Action _ -> Error (`Not_implemented "action")
+    | Rent _ -> Error (`Not_implemented "rent")
   in
   {
     game with
@@ -176,17 +176,14 @@ let update game =
             play_card card { game with table = Table.update player game.table }
           with
           | Ok game -> game
-          | Error `Full_set ->
-              {
-                game with
-                state =
-                  {
-                    game.state with
-                    message =
-                      Printf.sprintf
-                        "You already have a full set for that color.";
-                  };
-              })
+          | Error e ->
+              let message =
+                match e with
+                | `Not_implemented component ->
+                    Printf.sprintf "`%s` not implemented." component
+                | `Full_set -> "You already have a full set for that color."
+              in
+              { game with state = { game.state with message } })
     | Discard -> discard game
 
 let start players =
