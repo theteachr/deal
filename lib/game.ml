@@ -92,23 +92,48 @@ let discard ({ table = player, _; _ } as game) =
   in
   if List.length player.hand = 7 then pass game else game
 
+(* MODIFIERS *)
+let draw_from_deck (n : int) (game : t) =
+  let cards, deck = Deck.draw n game.deck in
+  let player = Player.update_hand (current_player game) cards in
+  { game with table = Table.update player game.table; deck }
+
+let play_property property (game : t) =
+  {
+    game with
+    table =
+      Table.update
+        (current_player game |> Player.add_property property)
+        game.table;
+  }
+
+let play_money amount (game : t) =
+  {
+    game with
+    table =
+      Table.update (current_player game |> Player.add_money amount) game.table;
+  }
+
+let play_pass_go (game : t) = draw_from_deck 2 game
+
 let play_card card game =
-  let player =
+  let game =
     match card with
-    | Card.Property card -> Player.add_property card (current_player game)
-    | Money card -> Player.add_money card (current_player game)
+    | Card.Property card -> play_property card game
+    | Money card -> play_money card game
+    | Action Pass_go -> play_pass_go game
     | Action _ -> failwith "todo: play action card"
     | Rent _ -> failwith "todo: play rent card"
   in
   {
     game with
-    table = Table.update player game.table;
     state =
       {
         cards_played = card :: game.state.cards_played;
         phase = Play;
         message =
-          Printf.sprintf "%s played [%s]." player.name (Card.display card);
+          Printf.sprintf "%s played [%s]." (current_player game).name
+            (Card.display card);
         index = 0;
       };
   }
@@ -153,13 +178,13 @@ let start players =
     | [] -> failwith "no players"
   in
   let deck = Deck.(shuffle default) in
-  let rec distribute count ((player, rest) as table) deck =
+  let rec distribute count game =
     (* Emulate the real way of distributing the cards? *)
-    if count = 0 then (table, deck)
+    if count = 0 then game
     else
-      let cards, deck = Deck.draw 5 deck in
-      let player = Player.update_hand player cards in
-      distribute (count - 1) (Table.turn (player, rest)) deck
+      distribute (count - 1)
+        { (draw_from_deck 5 game) with table = Table.turn game.table }
   in
-  let table, deck = distribute (List.length players) table deck in
-  next { table; deck; turn = 0; state = State.init; discarded = [] }
+  distribute (List.length players)
+    { table; deck; turn = 0; state = State.init; discarded = [] }
+  |> next
