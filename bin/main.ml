@@ -2,12 +2,12 @@ open Deal
 
 let view_bank bank = bank |> List.map Card.Money.display |> String.concat "\n"
 
-let view_hand hand selected =
-  let view_card i card =
+let view_selected items selected view =
+  let view_item i card =
     let bullet = if i = selected then ">" else " " in
-    Printf.sprintf "%s %s" bullet (Card.display card)
+    Printf.sprintf "%s %s" bullet (view card)
   in
-  hand |> List.mapi view_card |> String.concat "\n"
+  items |> List.mapi view_item |> String.concat "\n"
 
 let view_set (color, ((properties, buildings) as set)) =
   let property_names =
@@ -67,7 +67,7 @@ Properties:
     (view_state state player)
     (* TODO: Don't view selectable hand when the player has already played
        3 cards. *)
-    (view_hand player.hand state.index)
+    (view_selected player.hand state.index Card.display)
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)
     (Deck.count deck) state.message
