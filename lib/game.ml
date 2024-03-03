@@ -93,31 +93,34 @@ let discard ({ table = player, _; _ } as game) =
   if List.length player.hand = 7 then pass game else game
 
 (* MODIFIERS *)
-let draw_from_deck (n : int) (game : t) =
+let draw_from_deck n game =
   let cards, deck = Deck.draw n game.deck in
   let player = Player.update_hand (current_player game) cards in
   { game with table = Table.update player game.table; deck }
 
-let play_property property (game : t) =
-  {
-    game with
-    table =
-      Table.update
-        (current_player game |> Player.add_property property)
-        game.table;
-  }
+let play_property property ({ table = player, _; _ } as game) =
+  if Player.has_full_set (Card.Property.color property) player then
+    Error `Full_set
+  else
+    {
+      game with
+      table = Table.update (Player.add_property property player) game.table;
+    }
+    |> Result.ok
 
-let play_money amount (game : t) =
+let play_money amount game =
   {
     game with
     table =
       Table.update (current_player game |> Player.add_money amount) game.table;
   }
+  |> Result.ok
 
-let play_pass_go (game : t) = draw_from_deck 2 game
+let play_pass_go game = draw_from_deck 2 game |> Result.ok
+let ( let* ) = Result.bind
 
 let play_card card game =
-  let game =
+  let* game =
     match card with
     | Card.Property card -> play_property card game
     | Money card -> play_money card game
@@ -137,6 +140,7 @@ let play_card card game =
         index = 0;
       };
   }
+  |> Result.ok
 
 let over { table = { assets; _ }, _; _ } =
   assets |> Player.Assets.full_property_sets |> List.length >= 3
@@ -154,7 +158,7 @@ let update game =
     }
   else
     match game.state.phase with
-    | Play ->
+    | Play -> (
         if List.length game.state.cards_played = 3 then
           {
             game with
@@ -168,7 +172,21 @@ let update game =
           let card, player =
             Player.remove_from_hand game.state.index (current_player game)
           in
-          play_card card { game with table = Table.update player game.table }
+          match
+            play_card card { game with table = Table.update player game.table }
+          with
+          | Ok game -> game
+          | Error `Full_set ->
+              {
+                game with
+                state =
+                  {
+                    game.state with
+                    message =
+                      Printf.sprintf
+                        "You already have a full set for that color.";
+                  };
+              })
     | Discard -> discard game
 
 let start players =

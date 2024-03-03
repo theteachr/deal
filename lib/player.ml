@@ -82,3 +82,8 @@ let add_money money player =
 let remove_from_hand index player =
   let card, hand = Hand.remove_card index player.hand in
   (card, { player with hand })
+
+let has_full_set color player =
+  player.assets.properties
+  |> Assets.Properties.find_opt color
+  |> Option.fold ~none:false ~some:Card.Property.Set.is_full
