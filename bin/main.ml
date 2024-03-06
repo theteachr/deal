@@ -28,6 +28,19 @@ let view_properties properties =
   |> List.map view_set
   |> String.concat "\n"
 
+let view_dual Card.Dual.{ colors = a, b; _ } colored =
+  let color_a = Color.display a in
+  let color_b = Color.display b in
+  match colored with
+  | Card.Dual.Left -> Printf.sprintf {|
+> %s
+  %s
+|} color_a color_b
+  | Right -> Printf.sprintf {|
+  %s
+> %s
+|} color_a color_b
+
 let view_state (state : Game.State.t) (player : Player.t) =
   match state.phase with
   | Play ->
@@ -44,6 +57,13 @@ let view_state (state : Game.State.t) (player : Player.t) =
   | Discard ->
       Printf.sprintf "%s has to discard %d." player.name
         (List.length player.hand - 7)
+  | Play_dual props ->
+      Printf.sprintf {|
+%s is playing a dual card."
+
+%s
+|} player.name
+        (view_dual props.card props.colored)
 
 let view Game.{ table = player, _; deck; state; _ } =
   Format.sprintf

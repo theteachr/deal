@@ -15,6 +15,8 @@ module Dual = struct
   let color { colored; colors = a, b } =
     colored |> Option.map (function Left -> a | Right -> b)
 
+  let choose choice dual = { dual with colored = Some choice }
+
   let display { colors = lcolor, rcolor; colored } =
     let open Color in
     let open Printf in
