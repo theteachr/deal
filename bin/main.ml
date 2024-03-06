@@ -59,14 +59,14 @@ let view_state (state : Game.State.t) (player : Player.t) =
         (List.length player.hand - 7)
   | Play_dual props ->
       Printf.sprintf {|
-%s is playing a dual card."
+%s is playing a dual card.
 
 %s
 |} player.name
         (view_dual props.card props.colored)
   | Play_wild { colors; index } ->
       Printf.sprintf {|
-%s is playing a wild card."
+%s is playing a wild card.
 
 %s
 |} player.name
