@@ -11,7 +11,7 @@ let view_selected items selected view =
 
 let view_set (color, ((properties, buildings) as set)) =
   let property_names =
-    properties |> List.map Card.Property.name |> String.concat ", "
+    properties |> List.map Card.Property.display |> String.concat ", "
   in
   let building_names =
     buildings

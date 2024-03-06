@@ -16,8 +16,8 @@ module Dual = struct
     let open Color in
     let open Printf in
     match used with
-    | Left -> sprintf "(%s) %s" (display lcolor) (display rcolor)
-    | Right -> sprintf "%s (%s)" (display lcolor) (display rcolor)
+    | Left -> sprintf "[%s]%s" (display lcolor) (display rcolor)
+    | Right -> sprintf "%s[%s]" (display lcolor) (display rcolor)
 end
 
 module Action = struct
@@ -110,9 +110,8 @@ module Property = struct
     | Simple (color, name) ->
         let open Color in
         Printf.sprintf "(%d) %s %s" (value color) (display color) name
-    | Dual ({ colors = a, b; _ }, value) ->
-        Printf.sprintf "(%d) %s%s Wild Property" value (Color.display a)
-          (Color.display b)
+    | Dual (dual, value) ->
+        Printf.sprintf "(%d) %s Wild Property" value (Dual.display dual)
     | Wild _ -> Printf.sprintf "(0) Wild Property"
 
   module Set = struct
