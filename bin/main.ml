@@ -64,6 +64,13 @@ let view_state (state : Game.State.t) (player : Player.t) =
 %s
 |} player.name
         (view_dual props.card props.colored)
+  | Play_wild { colors; index } ->
+      Printf.sprintf {|
+%s is playing a wild card."
+
+%s
+|} player.name
+        (view_selected colors index Color.display)
 
 let view Game.{ table = player, _; deck; state; _ } =
   Format.sprintf

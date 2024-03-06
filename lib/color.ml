@@ -11,6 +11,11 @@ type t =
   | Yellow
 [@@deriving ord, show]
 
+let all =
+  [
+    Black; Blue; Brown; Green; Magenta; Orange; Red; Sky_blue; Turquoise; Yellow;
+  ]
+
 let value = function
   | Black -> 2
   | Blue -> 4

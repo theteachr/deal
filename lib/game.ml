@@ -18,6 +18,10 @@ module State = struct
         value : int;
         colored : Card.Dual.colored;
       }
+    | Play_wild of {
+        colors : Color.t list;
+        index : int;
+      }
 
   type t = {
     cards_played : Card.t list;
@@ -42,30 +46,34 @@ let next_index i l = (i + 1) mod List.length l
 let prev_index i l = (i + List.length l - 1) mod List.length l
 
 let select_next ({ table = player, _; state; _ } as game) =
-  match state.phase with
-  | Play_dual props ->
-      {
-        game with
-        state = { state with phase = Play_dual { props with colored = Right } };
-      }
-  | _ ->
-      {
-        game with
-        state = { state with index = next_index state.index player.hand };
-      }
+  let state =
+    match state.phase with
+    | Play_dual props ->
+        { state with phase = Play_dual { props with colored = Right } }
+    | Play_wild props ->
+        {
+          state with
+          phase =
+            Play_wild { props with index = next_index props.index props.colors };
+        }
+    | _ -> { state with index = next_index state.index player.hand }
+  in
+  { game with state }
 
 let select_prev ({ table = player, _; state; _ } as game) =
-  match state.phase with
-  | Play_dual props ->
-      {
-        game with
-        state = { state with phase = Play_dual { props with colored = Left } };
-      }
-  | _ ->
-      {
-        game with
-        state = { state with index = prev_index state.index player.hand };
-      }
+  let state =
+    match state.phase with
+    | Play_dual props ->
+        { state with phase = Play_dual { props with colored = Left } }
+    | Play_wild props ->
+        {
+          state with
+          phase =
+            Play_wild { props with index = prev_index props.index props.colors };
+        }
+    | _ -> { state with index = prev_index state.index player.hand }
+  in
+  { game with state }
 
 let current_player { table = player, _; _ } = player
 
@@ -122,6 +130,16 @@ let play_property property ({ table = player, _; _ } as game) =
           {
             game.state with
             phase = Play_dual { card = dual; value; colored = Left };
+          };
+      }
+      |> Result.ok
+  | Wild None ->
+      {
+        game with
+        state =
+          {
+            game.state with
+            phase = Play_wild { colors = Color.all; index = 0 };
           };
       }
       |> Result.ok
@@ -231,6 +249,16 @@ let update game =
     | Discard -> discard game
     | Play_dual { card; colored; value } -> (
         let card = Card.(Property.Dual (Dual.choose colored card, value)) in
+        match play_property card game with
+        | Ok game -> game
+        | Error e ->
+            let message =
+              match e with
+              | `Full_set -> "You already have a full set for that color."
+            in
+            { game with state = { game.state with message } })
+    | Play_wild { colors; index } -> (
+        let card = Card.(Property.Wild (Some (List.nth colors index))) in
         match play_property card game with
         | Ok game -> game
         | Error e ->
