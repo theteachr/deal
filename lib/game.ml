@@ -48,20 +48,23 @@ let select_prev ({ table = player, _; state; _ } as game) =
     state = { state with index = prev_index state.index player.hand };
   }
 
-let next ({ table = player, opponents; deck; turn; _ } as game) =
-  let n = if Player.empty_hand player then 5 else 2 in
-  let cards, deck = Deck.draw n deck in
+let current_player { table = player, _; _ } = player
+
+(* MODIFIERS *)
+let draw_from_deck n game =
   (* TODO: Reshuffle discarded when [List.length cards <> n] *)
-  let player = Player.update_hand player cards in
+  let cards, deck = Deck.draw n game.deck in
+  let player = Player.update_hand (current_player game) cards in
+  { game with table = Table.update player game.table; deck }
+
+let next ({ table = player, _; deck; turn; _ } as game) =
+  let n = if Player.empty_hand player then 5 else 2 in
   {
-    game with
-    table = (player, opponents);
+    (draw_from_deck n game) with
     turn = turn + 1;
     state = State.reset game.state;
     deck;
   }
-
-let current_player { table = player, _; _ } = player
 
 let pass game =
   let Player.{ hand; _ } = current_player game in
@@ -91,12 +94,6 @@ let discard ({ table = player, _; _ } as game) =
     }
   in
   if List.length player.hand = 7 then pass game else game
-
-(* MODIFIERS *)
-let draw_from_deck n game =
-  let cards, deck = Deck.draw n game.deck in
-  let player = Player.update_hand (current_player game) cards in
-  { game with table = Table.update player game.table; deck }
 
 let play_property property ({ table = player, _; _ } as game) =
   if Player.has_full_set (Card.Property.color property) player then
@@ -186,6 +183,8 @@ let update game =
               { game with state = { game.state with message } })
     | Discard -> discard game
 
+let turn game = { game with table = Table.turn game.table }
+
 let start players =
   let table =
     match players with
@@ -193,13 +192,10 @@ let start players =
     | [] -> failwith "no players"
   in
   let deck = Deck.(shuffle default) in
-  let rec distribute count game =
+  let rec distribute ?(count = List.length players) game =
     (* Emulate the real way of distributing the cards? *)
     if count = 0 then game
-    else
-      distribute (count - 1)
-        { (draw_from_deck 5 game) with table = Table.turn game.table }
+    else distribute ~count:(count - 1) (draw_from_deck 5 game |> turn)
   in
-  distribute (List.length players)
-    { table; deck; turn = 0; state = State.init; discarded = [] }
+  distribute { table; deck; turn = 0; state = State.init; discarded = [] }
   |> next
