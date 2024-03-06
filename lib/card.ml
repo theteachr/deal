@@ -1,23 +1,29 @@
 module Dual = struct
-  type chosen =
+  type colored =
     | Left
     | Right
   [@@deriving show]
 
   type t = {
     colors : Color.t * Color.t;
-    used : chosen;
+    colored : colored option;
   }
   [@@deriving show]
 
-  let of_colors colors = { colors; used = Left }
+  let of_colors colors = { colors; colored = None }
 
-  let display { colors = lcolor, rcolor; used } =
+  let color { colored; colors = a, b } =
+    colored |> Option.map (function Left -> a | Right -> b)
+
+  let display { colors = lcolor, rcolor; colored } =
     let open Color in
     let open Printf in
-    match used with
-    | Left -> sprintf "[%s]%s" (display lcolor) (display rcolor)
-    | Right -> sprintf "%s[%s]" (display lcolor) (display rcolor)
+    Option.fold
+      ~some:(function
+        | Left -> sprintf "[%s]%s" (display lcolor) (display rcolor)
+        | Right -> sprintf "%s[%s]" (display lcolor) (display rcolor))
+      ~none:(sprintf "%s%s" (display lcolor) (display rcolor))
+      colored
 end
 
 module Action = struct
@@ -88,7 +94,7 @@ module Property = struct
   type t =
     | Simple of Color.t * string
     | Dual of Dual.t * int
-    | Wild of Color.t
+    | Wild of Color.t option
   [@@deriving show]
 
   let value = function
@@ -102,9 +108,8 @@ module Property = struct
 
   let color = function
     | Simple (color, _) -> color
-    | Dual ({ colors = lcolor, rcolor; used }, _) -> (
-        match used with Left -> lcolor | Right -> rcolor)
-    | Wild color -> color
+    | Dual (dual, _) -> Dual.color dual |> Option.get
+    | Wild color -> color |> Option.get
 
   let display = function
     | Simple (color, name) ->
@@ -153,7 +158,7 @@ module Property = struct
 
   let simple color name = Simple (color, name)
   let dual colors value = Dual (Dual.of_colors colors, value)
-  let wild color = Wild color
+  let wild = Wild None
 end
 
 module Rent = struct
