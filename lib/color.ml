@@ -43,3 +43,5 @@ let rgb = function
 let display color =
   let r, g, b = rgb color in
   Printf.sprintf "\x1b[38;2;%d;%d;%dm●\x1b[0m" r g b
+
+let green_text = Printf.sprintf "\x1b[1;32m%s\x1b[0m"

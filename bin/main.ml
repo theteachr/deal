@@ -41,35 +41,40 @@ let view_dual Card.Dual.{ colors = a, b; _ } colored =
 > %s
 |} color_a color_b
 
-let view_state (state : Game.State.t) (player : Player.t) =
-  match state.phase with
+let view_state Game.State.{ phase; cards_played; _ } Player.{ name; hand; _ } =
+  match phase with
   | Play ->
       let open Printf in
-      let cards_played =
-        state.cards_played |> List.map Card.display |> String.concat ", "
+      let cards_turned =
+        cards_played |> List.map Card.display |> String.concat ", "
       in
       let header =
-        if List.length state.cards_played = 3 then
-          sprintf "%s has played all cards in the turn." player.name
-        else sprintf "%s is playing." player.name
+        if List.length cards_played = 3 then
+          sprintf "%s has played all cards in the turn." name
+        else sprintf "%s is playing." name
       in
-      sprintf "%s\nCards turned: [%s]" header cards_played
+      sprintf {|
+%s
+
+Cards turned: [%s]
+|} header cards_turned
   | Discard ->
-      Printf.sprintf "%s has to discard %d." player.name
-        (List.length player.hand - 7)
+      Printf.sprintf {|
+%s has to discard %d.
+|} name (List.length hand - 7)
   | Play_dual props ->
       Printf.sprintf {|
 %s is playing a dual card.
 
 %s
-|} player.name
+|} name
         (view_dual props.card props.colored)
   | Play_wild { colors; index } ->
       Printf.sprintf {|
 %s is playing a wild card.
 
 %s
-|} player.name
+|} name
         (view_selected colors index Color.display)
 
 let view Game.{ table = player, _; deck; state; _ } =

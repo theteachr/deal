@@ -116,10 +116,10 @@ module Property = struct
   let display = function
     | Simple (color, name) ->
         let open Color in
-        Printf.sprintf "(%d) %s %s" (value color) (display color) name
+        Printf.sprintf "(%2d) %s %s" (value color) (display color) name
     | Dual (dual, value) ->
-        Printf.sprintf "(%d) %s Wild Property" value (Dual.display dual)
-    | Wild _ -> Printf.sprintf "(0) Wild Property"
+        Printf.sprintf "(%2d) %s Wild Property" value (Dual.display dual)
+    | Wild _ -> Printf.sprintf "(%2d) Wild Property" 0
 
   module Set = struct
     (* FIXME: Invalid state
@@ -186,7 +186,7 @@ module Rent = struct
           Printf.sprintf "%s%s Rent" (Color.display a) (Color.display b)
       | Wild -> "Wild Rent"
     in
-    Printf.sprintf "(%d) %s" value suffix
+    Printf.sprintf "(%2d) %s" value suffix
 end
 
 type t =
@@ -203,7 +203,7 @@ let rent colors value = Rent (Rent.dual colors value)
 let wild_rent = Rent Rent.wild
 
 let display = function
-  | Money card -> Printf.sprintf "(%d) Money" (Money.value card)
+  | Money card -> Printf.sprintf "(%2d) Money" (Money.value card)
   | Property card -> Property.display card
-  | Action card -> Action.(Printf.sprintf "(%d) %s" (value card) (name card))
+  | Action card -> Action.(Printf.sprintf "(%2d) %s" (value card) (name card))
   | Rent card -> Rent.display card
