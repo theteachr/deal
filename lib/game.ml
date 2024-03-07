@@ -84,13 +84,14 @@ let draw_from_deck n game =
   let player = Player.update_hand (current_player game) cards in
   { game with table = Table.update player game.table; deck }
 
-let next ({ table = player, _; turn; _ } as game) =
-  let n = if Player.empty_hand player then 5 else 2 in
+let next game =
+  let n = if Player.empty_hand (current_player game) then 5 else 2 in
   {
     (draw_from_deck n game) with
-    turn = turn + 1;
+    turn = game.turn + 1;
     state = State.reset game.state;
   }
+
 
 let pass game =
   let Player.{ hand; _ } = current_player game in
