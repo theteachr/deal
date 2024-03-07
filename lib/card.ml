@@ -119,7 +119,9 @@ module Property = struct
         Printf.sprintf "(%2d) %s %s" (value color) (display color) name
     | Dual (dual, value) ->
         Printf.sprintf "(%2d) %s Wild Property" value (Dual.display dual)
-    | Wild _ -> Printf.sprintf "(%2d) Wild Property" 0
+    | Wild None -> Printf.sprintf "(%2d) Wild Property" 0
+    | Wild (Some color) ->
+        Printf.sprintf "(%2d) %s Wild Property" 0 (Color.display color)
 
   module Set = struct
     (* FIXME: Invalid state
