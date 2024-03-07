@@ -66,7 +66,8 @@ type t = {
   assets : Assets.t;
 }
 
-let create name = { name; hand = Hand.empty; assets = Assets.empty }
+let create name =
+  { name = Color.green_text name; hand = Hand.empty; assets = Assets.empty }
 
 let update_hand player cards =
   { player with hand = List.rev_append cards player.hand }

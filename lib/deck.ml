@@ -37,7 +37,7 @@ let default =
         ]
       @ List.init 2 (Fun.const @@ Property.dual (Orange, Magenta) 2)
       @ List.init 2 (Fun.const @@ Property.dual (Yellow, Red) 3)
-      @ List.init 2 (Fun.const @@ Property.wild Blue)
+      @ List.init 2 (Fun.const @@ Property.wild)
       |> List.map (fun card -> Property card);
       (* Money Cards *)
       List.init 2 (Fun.const @@ money 5);

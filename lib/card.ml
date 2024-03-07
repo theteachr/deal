@@ -1,23 +1,31 @@
 module Dual = struct
-  type chosen =
+  type colored =
     | Left
     | Right
   [@@deriving show]
 
   type t = {
     colors : Color.t * Color.t;
-    used : chosen;
+    colored : colored option;
   }
   [@@deriving show]
 
-  let of_colors colors = { colors; used = Left }
+  let of_colors colors = { colors; colored = None }
 
-  let display { colors = lcolor, rcolor; used } =
+  let color { colored; colors = a, b } =
+    colored |> Option.map (function Left -> a | Right -> b)
+
+  let choose choice dual = { dual with colored = Some choice }
+
+  let display { colors = lcolor, rcolor; colored } =
     let open Color in
     let open Printf in
-    match used with
-    | Left -> sprintf "(%s) %s" (display lcolor) (display rcolor)
-    | Right -> sprintf "%s (%s)" (display lcolor) (display rcolor)
+    Option.fold
+      ~some:(function
+        | Left -> sprintf "[%s]%s" (display lcolor) (display rcolor)
+        | Right -> sprintf "%s[%s]" (display lcolor) (display rcolor))
+      ~none:(sprintf "%s%s" (display lcolor) (display rcolor))
+      colored
 end
 
 module Action = struct
@@ -88,7 +96,7 @@ module Property = struct
   type t =
     | Simple of Color.t * string
     | Dual of Dual.t * int
-    | Wild of Color.t
+    | Wild of Color.t option
   [@@deriving show]
 
   let value = function
@@ -102,18 +110,16 @@ module Property = struct
 
   let color = function
     | Simple (color, _) -> color
-    | Dual ({ colors = lcolor, rcolor; used }, _) -> (
-        match used with Left -> lcolor | Right -> rcolor)
-    | Wild color -> color
+    | Dual (dual, _) -> Dual.color dual |> Option.get
+    | Wild color -> color |> Option.get
 
   let display = function
     | Simple (color, name) ->
         let open Color in
-        Printf.sprintf "(%d) %s %s" (value color) (display color) name
-    | Dual ({ colors = a, b; _ }, value) ->
-        Printf.sprintf "(%d) %s%s Wild Property" value (Color.display a)
-          (Color.display b)
-    | Wild _ -> Printf.sprintf "(0) Wild Property"
+        Printf.sprintf "(%2d) %s %s" (value color) (display color) name
+    | Dual (dual, value) ->
+        Printf.sprintf "(%2d) %s Wild Property" value (Dual.display dual)
+    | Wild _ -> Printf.sprintf "(%2d) Wild Property" 0
 
   module Set = struct
     (* FIXME: Invalid state
@@ -154,7 +160,7 @@ module Property = struct
 
   let simple color name = Simple (color, name)
   let dual colors value = Dual (Dual.of_colors colors, value)
-  let wild color = Wild color
+  let wild = Wild None
 end
 
 module Rent = struct
@@ -180,7 +186,7 @@ module Rent = struct
           Printf.sprintf "%s%s Rent" (Color.display a) (Color.display b)
       | Wild -> "Wild Rent"
     in
-    Printf.sprintf "(%d) %s" value suffix
+    Printf.sprintf "(%2d) %s" value suffix
 end
 
 type t =
@@ -197,7 +203,7 @@ let rent colors value = Rent (Rent.dual colors value)
 let wild_rent = Rent Rent.wild
 
 let display = function
-  | Money card -> Printf.sprintf "(%d) Money" (Money.value card)
+  | Money card -> Printf.sprintf "(%2d) Money" (Money.value card)
   | Property card -> Property.display card
-  | Action card -> Action.(Printf.sprintf "(%d) %s" (value card) (name card))
+  | Action card -> Action.(Printf.sprintf "(%2d) %s" (value card) (name card))
   | Rent card -> Rent.display card

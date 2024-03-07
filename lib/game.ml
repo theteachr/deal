@@ -13,6 +13,15 @@ module State = struct
   type phase =
     | Play
     | Discard
+    | Play_dual of {
+        card : Card.Dual.t;
+        value : int;
+        colored : Card.Dual.colored;
+      }
+    | Play_wild of {
+        colors : Color.t list;
+        index : int;
+      }
 
   type t = {
     cards_played : Card.t list;
@@ -37,16 +46,34 @@ let next_index i l = (i + 1) mod List.length l
 let prev_index i l = (i + List.length l - 1) mod List.length l
 
 let select_next ({ table = player, _; state; _ } as game) =
-  {
-    game with
-    state = { state with index = next_index state.index player.hand };
-  }
+  let state =
+    match state.phase with
+    | Play_dual props ->
+        { state with phase = Play_dual { props with colored = Right } }
+    | Play_wild props ->
+        {
+          state with
+          phase =
+            Play_wild { props with index = next_index props.index props.colors };
+        }
+    | _ -> { state with index = next_index state.index player.hand }
+  in
+  { game with state }
 
 let select_prev ({ table = player, _; state; _ } as game) =
-  {
-    game with
-    state = { state with index = prev_index state.index player.hand };
-  }
+  let state =
+    match state.phase with
+    | Play_dual props ->
+        { state with phase = Play_dual { props with colored = Left } }
+    | Play_wild props ->
+        {
+          state with
+          phase =
+            Play_wild { props with index = prev_index props.index props.colors };
+        }
+    | _ -> { state with index = prev_index state.index player.hand }
+  in
+  { game with state }
 
 let current_player { table = player, _; _ } = player
 
@@ -57,14 +84,14 @@ let draw_from_deck n game =
   let player = Player.update_hand (current_player game) cards in
   { game with table = Table.update player game.table; deck }
 
-let next ({ table = player, _; deck; turn; _ } as game) =
-  let n = if Player.empty_hand player then 5 else 2 in
+let next game =
+  let n = if Player.empty_hand (current_player game) then 5 else 2 in
   {
     (draw_from_deck n game) with
-    turn = turn + 1;
+    turn = game.turn + 1;
     state = State.reset game.state;
-    deck;
   }
+
 
 let pass game =
   let Player.{ hand; _ } = current_player game in
@@ -96,37 +123,66 @@ let discard ({ table = player, _; _ } as game) =
   if List.length player.hand = 7 then pass game else game
 
 let play_property property ({ table = player, _; _ } as game) =
-  if Player.has_full_set (Card.Property.color property) player then
-    Error `Full_set
-  else
-    {
-      game with
-      table = Table.update (Player.add_property property player) game.table;
-    }
-    |> Result.ok
+  match property with
+  | Card.Property.Dual (({ colored = None; _ } as dual), value) ->
+      {
+        game with
+        state =
+          {
+            game.state with
+            phase = Play_dual { card = dual; value; colored = Left };
+          };
+      }
+      |> Result.ok
+  | Wild None ->
+      {
+        game with
+        state =
+          {
+            game.state with
+            phase = Play_wild { colors = Color.all; index = 0 };
+          };
+      }
+      |> Result.ok
+  | _ ->
+      if Player.has_full_set (Card.Property.color property) player then
+        Error `Full_set
+      else
+        {
+          game with
+          table = Table.update (Player.add_property property player) game.table;
+          state =
+            {
+              cards_played = Card.Property property :: game.state.cards_played;
+              phase = Play;
+              message =
+                Printf.sprintf "%s played [%s]." (current_player game).name
+                  (Card.Property.display property);
+              index = 0;
+            };
+        }
+        |> Result.ok
 
 let play_money amount game =
   {
     game with
     table =
       Table.update (current_player game |> Player.add_money amount) game.table;
+    state =
+      {
+        cards_played = Card.Money amount :: game.state.cards_played;
+        phase = Play;
+        message =
+          Printf.sprintf "%s played [%s]." (current_player game).name
+            (Card.Money.display amount);
+        index = 0;
+      };
   }
   |> Result.ok
 
-let play_pass_go game = draw_from_deck 2 game |> Result.ok
-let ( let* ) = Result.bind
-
-let play_card card game =
-  let* game =
-    match card with
-    | Card.Property card -> play_property card game
-    | Money card -> play_money card game
-    | Action Pass_go -> play_pass_go game
-    | Action _ -> Error (`Not_implemented "action")
-    | Rent _ -> Error (`Not_implemented "rent")
-  in
+let play_pass_go card game =
   {
-    game with
+    (draw_from_deck 2 game) with
     state =
       {
         cards_played = card :: game.state.cards_played;
@@ -138,6 +194,16 @@ let play_card card game =
       };
   }
   |> Result.ok
+
+let ( let* ) = Result.bind
+
+let play_card card game =
+  match card with
+  | Card.Property card -> play_property card game
+  | Money card -> play_money card game
+  | Action Pass_go -> play_pass_go card game
+  | Action _ -> Error (`Not_implemented "action")
+  | Rent _ -> Error (`Not_implemented "rent")
 
 let over { table = { assets; _ }, _; _ } =
   assets |> Player.Assets.full_property_sets |> List.length >= 3
@@ -182,6 +248,26 @@ let update game =
               in
               { game with state = { game.state with message } })
     | Discard -> discard game
+    | Play_dual { card; colored; value } -> (
+        let card = Card.(Property.Dual (Dual.choose colored card, value)) in
+        match play_property card game with
+        | Ok game -> game
+        | Error e ->
+            let message =
+              match e with
+              | `Full_set -> "You already have a full set for that color."
+            in
+            { game with state = { game.state with message } })
+    | Play_wild { colors; index } -> (
+        let card = Card.(Property.Wild (Some (List.nth colors index))) in
+        match play_property card game with
+        | Ok game -> game
+        | Error e ->
+            let message =
+              match e with
+              | `Full_set -> "You already have a full set for that color."
+            in
+            { game with state = { game.state with message } })
 
 let turn game = { game with table = Table.turn game.table }
 
