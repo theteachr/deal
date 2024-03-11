@@ -92,10 +92,8 @@ let next game =
     state = State.reset game.state;
   }
 
-
-let pass game =
-  let Player.{ hand; _ } = current_player game in
-  let excess = List.length hand - 7 in
+let pass ({ table = player, _; _ } as game) =
+  let excess = List.length player.hand - 7 in
   if excess > 0 then
     let message =
       Printf.sprintf "Excess cards in your hand. You need to discard %d." excess
@@ -156,7 +154,7 @@ let play_property property ({ table = player, _; _ } as game) =
               cards_played = Card.Property property :: game.state.cards_played;
               phase = Play;
               message =
-                Printf.sprintf "%s played [%s]." (current_player game).name
+                Printf.sprintf "%s played %s." player.name
                   (Card.Property.display property);
               index = 0;
             };
@@ -173,7 +171,7 @@ let play_money amount game =
         cards_played = Card.Money amount :: game.state.cards_played;
         phase = Play;
         message =
-          Printf.sprintf "%s played [%s]." (current_player game).name
+          Printf.sprintf "%s played %s." (current_player game).name
             (Card.Money.display amount);
         index = 0;
       };
@@ -188,7 +186,7 @@ let play_pass_go card game =
         cards_played = card :: game.state.cards_played;
         phase = Play;
         message =
-          Printf.sprintf "%s played [%s]." (current_player game).name
+          Printf.sprintf "%s played %s." (current_player game).name
             (Card.display card);
         index = 0;
       };

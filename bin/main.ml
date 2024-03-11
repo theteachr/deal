@@ -48,16 +48,15 @@ let view_state Game.State.{ phase; cards_played; _ } Player.{ name; hand; _ } =
       let cards_turned =
         cards_played |> List.map Card.display |> String.concat ", "
       in
-      let header =
-        if List.length cards_played = 3 then
-          sprintf "%s has played all cards in the turn." name
-        else sprintf "%s is playing." name
+      let phrase =
+        if List.length cards_played = 3 then "has played all cards in the turn."
+        else "is playing."
       in
       sprintf {|
-%s
+%s %s
 
 Cards turned: [%s]
-|} header cards_turned
+|} name phrase cards_turned
   | Discard ->
       Printf.sprintf {|
 %s has to discard %d.
