@@ -79,8 +79,18 @@ let current_player { table = player, _; _ } = player
 
 (* MODIFIERS *)
 let draw_from_deck n game =
-  (* TODO: Reshuffle discarded when [List.length cards <> n] *)
-  let cards, deck = Deck.draw n game.deck in
+  let cards, deck =
+    game.deck
+    |> Deck.draw n
+    |> Either.fold ~right:Fun.id ~left:(fun (cards, remaining) ->
+           let drawn, deck =
+             Deck.of_list game.discarded
+             |> Deck.draw remaining
+             |> Either.find_right
+             |> Option.get
+           in
+           (List.rev_append cards drawn, deck))
+  in
   let player = Player.update_hand (current_player game) cards in
   { game with table = Table.update player game.table; deck }
 

@@ -77,11 +77,12 @@ let shuffle deck =
 
 let draw n deck =
   let rec pop n drawn = function
-    | deck when n = 0 -> (drawn, deck)
-    | [] as empty -> (drawn, empty)
+    | deck when n = 0 -> Either.Right (drawn, deck)
+    | [] -> Either.Left (drawn, n)
     | card :: deck -> pop (n - 1) (card :: drawn) deck
   in
   pop n [] deck
 
 let count = List.length
 let is_empty = List.is_empty
+let of_list = Fun.id
