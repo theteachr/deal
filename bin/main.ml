@@ -41,42 +41,57 @@ let view_dual Card.Dual.{ colors = a, b; _ } colored =
 > %s
 |} color_a color_b
 
-let view_state Game.State.{ phase; cards_played; _ } Player.{ name; hand; _ } =
-  match phase with
+let view_table players =
+  players
+  |> List.map (fun (player : Player.t) ->
+         Printf.sprintf {|== %s ==
+Bank value: %u
+Properties:
+%s
+|} player.name
+           (Player.Bank.value player.assets.bank)
+           (view_properties player.assets.properties))
+  |> String.concat "\n"
+
+let view_state Game.{ state; table = player, opponents; _ } =
+  match state.phase with
   | Play ->
       let open Printf in
       let cards_turned =
-        cards_played |> List.map Card.display |> String.concat ", "
+        state.cards_played |> List.map Card.display |> String.concat ", "
       in
       let phrase =
-        if List.length cards_played = 3 then "has played all cards in the turn."
+        if List.length state.cards_played = 3 then
+          "has played all cards in the turn."
         else "is playing."
       in
       sprintf {|
 %s %s
 
 Cards turned: [%s]
-|} name phrase cards_turned
+|} player.name phrase cards_turned
   | Discard ->
       Printf.sprintf {|
 %s has to discard %d.
-|} name (List.length hand - 7)
+|} player.name
+        (List.length player.hand - 7)
   | Play_dual props ->
       Printf.sprintf {|
 %s is playing a dual card.
 
 %s
-|} name
+|} player.name
         (view_dual props.card props.colored)
   | Play_wild { colors; index } ->
       Printf.sprintf {|
 %s is playing a wild card.
 
 %s
-|} name
+|} player.name
         (view_selected colors index Color.display)
+  | Show_table -> view_table opponents
 
-let view Game.{ table = player, _; deck; state; _ } =
+let view_play (Game.{ table = player, _; deck; state; _ } as game) =
   Format.sprintf
     {|
 %s
@@ -95,13 +110,18 @@ Properties:
 
 %s
 |}
-    (view_state state player)
+    (view_state game)
     (* TODO: Don't view selectable hand when the player has already played
        3 cards. *)
     (view_selected player.hand state.index Card.display)
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)
     (Deck.count deck) state.message
+
+let view Game.({ state = { phase; _ }; table; _ } as game) =
+  match phase with
+  | Game.State.Show_table -> view_table (snd table)
+  | _ -> view_play game
 
 let clear_screen () =
   let _ = Sys.command "clear" in
@@ -121,6 +141,9 @@ let rec loop game =
   | "f" -> Game.pass game |> loop
   (* play card *)
   | "p" -> Game.update game |> loop
+  | "v" -> Game.show_table game |> loop
+  (* go back to play *)
+  | "b" -> Game.back game |> loop
   | _ -> game |> loop
 
 let () =

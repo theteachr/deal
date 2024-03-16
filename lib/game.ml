@@ -6,7 +6,7 @@ module Table = struct
   let turn (current, opponents) =
     match opponents @ [ current ] with
     | current :: opponents -> (current, opponents)
-    | _ -> failwith "should not be empty"
+    | _ -> (current, [])
 end
 
 module State = struct
@@ -22,6 +22,7 @@ module State = struct
         colors : Color.t list;
         index : int;
       }
+    | Show_table
 
   type t = {
     cards_played : Card.t list;
@@ -276,6 +277,7 @@ let update game =
               | `Full_set -> "You already have a full set for that color."
             in
             { game with state = { game.state with message } })
+    | Show_table -> failwith "todo"
 
 let turn game = { game with table = Table.turn game.table }
 
@@ -293,3 +295,11 @@ let start players =
   in
   distribute { table; deck; turn = 0; state = State.init; discarded = [] }
   |> next
+
+let show_table game =
+  { game with state = { game.state with phase = Show_table } }
+
+let back game =
+  match game.state.phase with
+  | Show_table -> { game with state = { game.state with phase = Play } }
+  | _ -> game
