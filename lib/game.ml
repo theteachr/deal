@@ -154,6 +154,9 @@ let play_property property ({ table = player, _; _ } as game) =
       }
       |> Result.ok
   | _ ->
+      (* TODO: Allow the player to have two sets of the same color.
+         Recently found out that we can own two different sets of the same
+         color. *)
       if Player.has_full_set (Card.Property.color property) player then
         Error `Full_set
       else
