@@ -82,21 +82,25 @@ let view_wild Player.{ name; assets = { properties; _ }; _ } colors index =
     (view_selected colors index Color.display)
     (view_properties properties)
 
-let view_collect_rent got want Player.{ assets = { bank; properties }; name; _ }
-    card =
+let view_collect_rent got want
+    (Player.{ name; assets = { bank; properties }; _ }, next_targets) card =
   Printf.sprintf
     {|
 Got: %d
 Want: %d
-Target: %s
+Target(s): %s [%s]
 Card: %s
 
 Bank:
 %s
 Properties:
 %s
-|} got want
-    name (Card.display card) (view_bank bank)
+|}
+    got want name
+    (next_targets
+    |> List.map (fun Player.{ name; _ } -> name)
+    |> String.concat "; ")
+    (Card.display card) (view_bank bank)
     (view_properties properties)
 
 let view_play Game.{ table = player, _; deck; state; _ } =
@@ -140,8 +144,8 @@ let view
     | Discard -> view_discard player index
     | Play_dual { card; colored; _ } -> view_dual player card colored
     | Play_wild { colors; index } -> view_wild player colors index
-    | Collect_rent { got; want; card; _ } ->
-        view_collect_rent got want player card
+    | Collect_rent { got; want; card; targets } ->
+        view_collect_rent got want targets card
   in
   Printf.sprintf {|%s
 %s|} content
