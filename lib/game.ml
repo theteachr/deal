@@ -2,6 +2,7 @@ module Table = struct
   type t = Player.t * Player.t list
 
   let update player (_, opponents) = (player, opponents)
+  let opponents (_, opponents) = opponents
 
   let turn (current, opponents) =
     match opponents @ [ current ] with
@@ -23,16 +24,21 @@ module State = struct
         index : int;
       }
     | Show_table
+    | Collect_rent of {
+        card : Card.t; (* FIXME: Invalid state *)
+        want : int;
+        got : int;
+        targets : Player.t * Player.t list;
+      }
 
   type t = {
     cards_played : Card.t list;
     phase : phase;
-    message : string;
+    message : string option;
     index : int;
   }
 
-  let init = { cards_played = []; phase = Play; message = ""; index = 0 }
-  let reset state = { init with message = state.message }
+  let init = { cards_played = []; phase = Play; message = None; index = 0 }
 end
 
 type t = {
@@ -66,6 +72,11 @@ let select_prev game = select Card.Dual.Left prev_index game
 let current_player { table = player, _; _ } = player
 
 (* MODIFIERS *)
+let set_message message game =
+  { game with state = { game.state with message = Some message } }
+
+let set_phase phase game = { game with state = { game.state with phase } }
+
 let draw_from_deck n game =
   let cards, deck =
     game.deck
@@ -84,11 +95,7 @@ let draw_from_deck n game =
 
 let next game =
   let n = if Player.empty_hand (current_player game) then 5 else 2 in
-  {
-    (draw_from_deck n game) with
-    turn = game.turn + 1;
-    state = State.reset game.state;
-  }
+  { (draw_from_deck n game) with turn = game.turn + 1; state = State.init }
 
 let pass ({ table = player, _; _ } as game) =
   let excess = List.length player.hand - 7 in
@@ -96,50 +103,29 @@ let pass ({ table = player, _; _ } as game) =
     let message =
       Printf.sprintf "Excess cards in your hand. You need to discard %d." excess
     in
-    { game with state = { game.state with phase = Discard; message } }
+    {
+      game with
+      state = { game.state with phase = Discard; message = Some message };
+    }
   else next { game with table = Table.turn game.table }
 
 let discard ({ table = player, _; _ } as game) =
   let card, player = Player.remove_from_hand game.state.index player in
-  let game =
-    {
-      game with
-      discarded = card :: game.discarded;
-      table = Table.update player game.table;
-      state =
-        {
-          game.state with
-          message =
-            Printf.sprintf "%s discarded [%s]." player.name (Card.display card);
-          phase = Discard;
-          index = 0;
-        };
-    }
-  in
-  if List.length player.hand = 7 then pass game else game
+  {
+    game with
+    discarded = card :: game.discarded;
+    table = Table.update player game.table;
+    state = { game.state with phase = Discard; index = 0 };
+  }
+  |> pass
 
 let play_property property ({ table = player, _; _ } as game) =
   match property with
   | Card.Property.Dual (({ colored = None; _ } as dual), value) ->
-      {
-        game with
-        state =
-          {
-            game.state with
-            phase = Play_dual { card = dual; value; colored = Left };
-          };
-      }
+      set_phase (Play_dual { card = dual; value; colored = Left }) game
       |> Result.ok
   | Wild None ->
-      {
-        game with
-        state =
-          {
-            game.state with
-            phase = Play_wild { colors = Color.all; index = 0 };
-          };
-      }
-      |> Result.ok
+      set_phase (Play_wild { colors = Color.all; index = 0 }) game |> Result.ok
   | _ ->
       (* TODO: Allow the player to have two sets of the same color.
          Recently found out that we can own two different sets of the same
@@ -156,7 +142,8 @@ let play_property property ({ table = player, _; _ } as game) =
               phase = Play;
               message =
                 Printf.sprintf "%s played %s." player.name
-                  (Card.Property.display property);
+                  (Card.Property.display property)
+                |> Option.some;
               index = 0;
             };
         }
@@ -173,7 +160,8 @@ let play_money amount game =
         phase = Play;
         message =
           Printf.sprintf "%s played %s." (current_player game).name
-            (Card.Money.display amount);
+            (Card.Money.display amount)
+          |> Option.some;
         index = 0;
       };
   }
@@ -188,86 +176,75 @@ let play_pass_go card game =
         phase = Play;
         message =
           Printf.sprintf "%s played %s." (current_player game).name
-            (Card.display card);
+            (Card.display card)
+          |> Option.some;
         index = 0;
       };
   }
   |> Result.ok
 
-let ( let* ) = Result.bind
+let play_birthday card game =
+  let targets = Table.opponents game.table in
+  game
+  |> set_phase
+     @@ Collect_rent
+          {
+            card;
+            want = 2;
+            got = 0;
+            targets = (List.hd targets, List.tl targets);
+          }
+  |> set_message
+     @@ Printf.sprintf "%s has played the Birthday card. Everyone should pay 2."
+          (current_player game).name
+  |> Result.ok
 
-let play_card card game =
-  match card with
+let play_card game =
+  let card, player =
+    Player.remove_from_hand game.state.index (current_player game)
+  in
+  let game = { game with table = Table.update player game.table } in
+  (match card with
   | Card.Property card -> play_property card game
   | Money card -> play_money card game
   | Action Pass_go -> play_pass_go card game
-  | Action _ -> Error (`Not_implemented "action")
-  | Rent _ -> Error (`Not_implemented "rent")
+  | Action Birthday -> play_birthday card game
+  | Action action -> Error (`Not_implemented (Card.Action.name action))
+  | Rent _ -> Error (`Not_implemented "rent"))
+  |> Result.fold
+       ~error:(function
+         | `Not_implemented component ->
+             let message = Printf.sprintf "`%s` not implemented." component in
+             set_message message game
+         | `Full_set ->
+             let message = "You already have a full set for that color." in
+             set_message message game)
+       ~ok:Fun.id
 
 let over { table = { assets; _ }, _; _ } =
   assets |> Player.Assets.full_property_sets |> List.length >= 3
 
+let play game =
+  if List.length game.state.cards_played = 3 then
+    set_message "Can't play any more cards in this turn." game
+  else play_card game
+
 let update game =
-  if game |> over then
-    {
-      game with
-      state =
-        {
-          game.state with
-          message =
-            Printf.sprintf "Game over. %s won." (current_player game).name;
-        };
-    }
-  else
-    match game.state.phase with
-    | Play -> (
-        if List.length game.state.cards_played = 3 then
-          {
-            game with
-            state =
-              {
-                game.state with
-                message = "Can't play any more cards in this turn.";
-              };
-          }
-        else
-          let card, player =
-            Player.remove_from_hand game.state.index (current_player game)
-          in
-          match
-            play_card card { game with table = Table.update player game.table }
-          with
-          | Ok game -> game
-          | Error e ->
-              let message =
-                match e with
-                | `Not_implemented component ->
-                    Printf.sprintf "`%s` not implemented." component
-                | `Full_set -> "You already have a full set for that color."
-              in
-              { game with state = { game.state with message } })
-    | Discard -> discard game
-    | Play_dual { card; colored; value } -> (
-        let card = Card.(Property.Dual (Dual.choose colored card, value)) in
-        match play_property card game with
-        | Ok game -> game
-        | Error e ->
-            let message =
-              match e with
-              | `Full_set -> "You already have a full set for that color."
-            in
-            { game with state = { game.state with message } })
-    | Play_wild { colors; index } -> (
-        let card = Card.(Property.Wild (Some (List.nth colors index))) in
-        match play_property card game with
-        | Ok game -> game
-        | Error e ->
-            let message =
-              match e with
-              | `Full_set -> "You already have a full set for that color."
-            in
-            { game with state = { game.state with message } })
-    | Show_table -> failwith "todo"
+  match game.state.phase with
+  | Play -> play game
+  | Discard -> discard game
+  | Play_dual { card; colored; value } ->
+      let card = Card.(Property.Dual (Dual.choose colored card, value)) in
+      play_property card game
+      |> Result.fold ~ok:Fun.id ~error:(function `Full_set ->
+             set_message "You already have a full set for that color." game)
+  | Play_wild { colors; index } ->
+      let card = Card.(Property.Wild (Some (List.nth colors index))) in
+      play_property card game
+      |> Result.fold ~ok:Fun.id ~error:(function `Full_set ->
+             set_message "You already have a full set for that color." game)
+  | Show_table -> game
+  | Collect_rent _ -> failwith "todo"
 
 let turn game = { game with table = Table.turn game.table }
 
@@ -286,10 +263,7 @@ let start players =
   distribute { table; deck; turn = 0; state = State.init; discarded = [] }
   |> next
 
-let show_table game =
-  { game with state = { game.state with phase = Show_table } }
+let show_table game = set_phase Show_table game
 
 let back game =
-  match game.state.phase with
-  | Show_table -> { game with state = { game.state with phase = Play } }
-  | _ -> game
+  match game.state.phase with Show_table -> set_phase Play game | _ -> game
