@@ -1,6 +1,10 @@
 open Deal
 
-let view_bank bank = bank |> List.map Card.Money.display |> String.concat "\n"
+let view_bank bank =
+  bank
+  |> List.map (fun card -> string_of_int @@ Card.Money.value card)
+  |> String.concat ", "
+  |> Printf.sprintf "[%s]"
 
 let view_selected items selected view =
   let view_item i card =
@@ -91,8 +95,7 @@ Want: %d
 Target(s): %s [%s]
 Card: %s
 
-Bank:
-%s
+Bank: %s
 Properties:
 %s
 |}
@@ -119,8 +122,7 @@ This turn: [%s]
 
 %s
 
-Bank:
-%s
+Bank: %s
 Properties:
 %s
 
