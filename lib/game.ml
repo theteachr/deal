@@ -83,10 +83,7 @@ let draw_from_deck n game =
     |> Deck.draw n
     |> Either.fold ~right:Fun.id ~left:(fun (cards, remaining) ->
            let drawn, deck =
-             Deck.of_list game.discarded
-             |> Deck.draw remaining
-             |> Either.find_right
-             |> Option.get
+             game.discarded |> Deck.of_list |> Deck.draw_max remaining
            in
            (List.rev_append cards drawn, deck))
   in
@@ -200,6 +197,7 @@ let play_birthday card game =
   |> Result.ok
 
 let play_card game =
+  (* We may want to try the card before removing it from the player's hand *)
   let card, player =
     Player.remove_from_hand game.state.index (current_player game)
   in
@@ -212,13 +210,14 @@ let play_card game =
   | Action action -> Error (`Not_implemented (Card.Action.name action))
   | Rent _ -> Error (`Not_implemented "rent"))
   |> Result.fold
-       ~error:(function
-         | `Not_implemented component ->
-             let message = Printf.sprintf "`%s` not implemented." component in
-             set_message message game
-         | `Full_set ->
-             let message = "You already have a full set for that color." in
-             set_message message game)
+       ~error:(fun error ->
+         let message =
+           match error with
+           | `Not_implemented component ->
+               Printf.sprintf "`%s` not implemented." component
+           | `Full_set -> "You already have a full set for that color."
+         in
+         set_message message game)
        ~ok:Fun.id
 
 let over { table = { assets; _ }, _; _ } =
@@ -229,20 +228,20 @@ let play game =
     set_message "Can't play any more cards in this turn." game
   else play_card game
 
+let play_wild_card game card =
+  play_property card game
+  |> Result.fold ~ok:Fun.id ~error:(function `Full_set ->
+         set_message "You already have a full set for that color." game)
+
 let update game =
   match game.state.phase with
   | Play -> play game
   | Discard -> discard game
   | Play_dual { card; colored; value } ->
-      let card = Card.(Property.Dual (Dual.choose colored card, value)) in
-      play_property card game
-      |> Result.fold ~ok:Fun.id ~error:(function `Full_set ->
-             set_message "You already have a full set for that color." game)
+      Card.(Property.Dual (Dual.choose colored card, value))
+      |> play_wild_card game
   | Play_wild { colors; index } ->
-      let card = Card.(Property.Wild (Some (List.nth colors index))) in
-      play_property card game
-      |> Result.fold ~ok:Fun.id ~error:(function `Full_set ->
-             set_message "You already have a full set for that color." game)
+      Card.(Property.Wild (Some (List.nth colors index))) |> play_wild_card game
   | Show_table -> game
   | Collect_rent _ -> failwith "todo"
 

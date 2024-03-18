@@ -173,6 +173,7 @@ let rec loop game =
   | "f" -> Game.pass game |> loop
   (* play card *)
   | "p" -> Game.update game |> loop
+  (* FIXME: Pressing this when asking for rent results in a loss of state *)
   | "v" -> Game.show_table game |> loop
   (* go back to play *)
   | "b" -> Game.back game |> loop

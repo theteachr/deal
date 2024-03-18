@@ -83,6 +83,14 @@ let draw n deck =
   in
   pop n [] deck
 
+let draw_max n deck =
+  let rec pop n drawn = function
+    | [] -> (drawn, [])
+    | deck when n = 0 -> (drawn, deck)
+    | card :: deck -> pop (n - 1) (card :: drawn) deck
+  in
+  pop n [] deck
+
 let count = List.length
 let is_empty = List.is_empty
 let of_list = Fun.id
