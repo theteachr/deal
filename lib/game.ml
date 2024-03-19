@@ -139,18 +139,18 @@ let play_property property ({ table = player, _; _ } as game) =
         }
         |> Result.ok
 
-let play_money amount game =
+let play_money card game =
   {
     game with
     table =
-      Table.update (current_player game |> Player.add_money amount) game.table;
+      Table.update (current_player game |> Player.add_money card) game.table;
     state =
       {
-        cards_played = Card.Money amount :: game.state.cards_played;
+        cards_played = Card.Money card :: game.state.cards_played;
         phase = Play;
         message =
           Printf.sprintf "%s played %s." (current_player game).name
-            (Card.Money.display amount)
+            (Card.Money.display card)
           |> Option.some;
         index = 0;
       };
