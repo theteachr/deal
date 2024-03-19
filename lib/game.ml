@@ -51,24 +51,6 @@ type t = {
 
 let next_index i max_value = (i + 1) mod max_value
 let prev_index i max_value = (i + max_value - 1) mod max_value
-
-let select colored f ({ table = player, _; state; _ } as game) =
-  let state =
-    match state.phase with
-    | Play_dual props -> { state with phase = Play_dual { props with colored } }
-    | Play_wild props ->
-        {
-          state with
-          phase =
-            Play_wild
-              { props with index = f props.index (List.length props.colors) };
-        }
-    | _ -> { state with index = f state.index (List.length player.hand) }
-  in
-  { game with state }
-
-let select_next game = select Card.Dual.Right next_index game
-let select_prev game = select Card.Dual.Left prev_index game
 let current_player { table = player, _; _ } = player
 
 (* MODIFIERS *)
@@ -76,6 +58,20 @@ let set_message message game =
   { game with state = { game.state with message = Some message } }
 
 let set_phase phase game = { game with state = { game.state with phase } }
+let set_index index game = { game with state = { game.state with index } }
+
+let select colored f ({ state; _ } as game) =
+  match state.phase with
+  | Play_dual props -> set_phase (Play_dual { props with colored }) game
+  | Play_wild props ->
+      set_phase
+        (Play_wild
+           { props with index = f props.index (List.length props.colors) })
+        game
+  | _ -> set_index (f state.index (List.length (current_player game).hand)) game
+
+let select_next game = select Card.Dual.Right next_index game
+let select_prev game = select Card.Dual.Left prev_index game
 
 let draw_from_deck n game =
   let cards, deck =
@@ -95,15 +91,12 @@ let next game =
   { (draw_from_deck n game) with turn = game.turn + 1; state = State.init }
 
 let pass ({ table = player, _; _ } as game) =
-  let excess = List.length player.hand - 7 in
-  if excess > 0 then
-    let message =
-      Printf.sprintf "Excess cards in your hand. You need to discard %d." excess
-    in
-    {
-      game with
-      state = { game.state with phase = Discard; message = Some message };
-    }
+  if List.length player.hand > 7 then
+    game
+    |> set_phase Discard
+    |> set_message
+         (Printf.sprintf "Excess cards in your hand. You need to discard %d."
+            (List.length player.hand - 7))
   else next { game with table = Table.turn game.table }
 
 let discard ({ table = player, _; _ } as game) =
