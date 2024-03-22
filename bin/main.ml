@@ -152,7 +152,7 @@ let view
   Printf.sprintf {|%s
 %s|} content
     (match message with
-    | Some message -> Printf.sprintf "Message: %s" message
+    | Some content -> Printf.sprintf "Message: %s" content
     | None -> "")
 
 let clear_screen () =

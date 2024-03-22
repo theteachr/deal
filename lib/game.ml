@@ -30,6 +30,7 @@ module State = struct
         got : int;
         targets : Player.t * Player.t list;
       }
+    (* TODO: Rearrange cards *)
 
   type t = {
     cards_played : Card.t list;
@@ -128,13 +129,11 @@ let play_property property ({ table = player, _; _ } as game) =
           table = Table.update (Player.add_property property player) game.table;
           state =
             {
-              cards_played = Card.Property property :: game.state.cards_played;
-              phase = Play;
+              game.state with
               message =
                 Printf.sprintf "%s played %s." player.name
                   (Card.Property.display property)
                 |> Option.some;
-              index = 0;
             };
         }
         |> Result.ok
@@ -146,13 +145,11 @@ let play_money card game =
       Table.update (current_player game |> Player.add_money card) game.table;
     state =
       {
-        cards_played = Card.Money card :: game.state.cards_played;
-        phase = Play;
+        game.state with
         message =
           Printf.sprintf "%s played %s." (current_player game).name
             (Card.Money.display card)
           |> Option.some;
-        index = 0;
       };
   }
   |> Result.ok
@@ -162,13 +159,12 @@ let play_pass_go card game =
     (draw_from_deck 2 game) with
     state =
       {
-        cards_played = card :: game.state.cards_played;
-        phase = Play;
+        game.state with
+        index = game.state.index + 2;
         message =
           Printf.sprintf "%s played %s." (current_player game).name
             (Card.display card)
           |> Option.some;
-        index = 0;
       };
   }
   |> Result.ok
@@ -190,11 +186,7 @@ let play_birthday card game =
   |> Result.ok
 
 let play_card game =
-  (* We may want to try the card before removing it from the player's hand *)
-  let card, player =
-    Player.remove_from_hand game.state.index (current_player game)
-  in
-  let game = { game with table = Table.update player game.table } in
+  let card = List.nth (current_player game).hand game.state.index in
   (match card with
   | Card.Property card -> play_property card game
   | Money card -> play_money card game
@@ -211,7 +203,20 @@ let play_card game =
            | `Full_set -> "You already have a full set for that color."
          in
          set_message message game)
-       ~ok:Fun.id
+       ~ok:(fun game ->
+         let card, player =
+           Player.remove_from_hand game.state.index (current_player game)
+         in
+         {
+           game with
+           table = Table.update player game.table;
+           state =
+             {
+               game.state with
+               index = 0;
+               cards_played = card :: game.state.cards_played;
+             };
+         })
 
 let over { table = { assets; _ }, _; _ } =
   assets |> Player.Assets.full_property_sets |> List.length >= 3
@@ -223,7 +228,7 @@ let play game =
 
 let play_wild_card game card =
   play_property card game
-  |> Result.fold ~ok:Fun.id ~error:(function `Full_set ->
+  |> Result.fold ~ok:(set_phase Play) ~error:(function `Full_set ->
          set_message "You already have a full set for that color." game)
 
 let update game =
