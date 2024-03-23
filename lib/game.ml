@@ -87,8 +87,8 @@ let select f ({ state; _ } as game) =
       game
       |> set_index @@ f state.index (List.length (current_player game).hand)
 
-let select_next game = select next_index game
-let select_prev game = select prev_index game
+let select_next = select next_index
+let select_prev = select prev_index
 
 let draw_from_deck n game =
   let cards, deck =
@@ -136,7 +136,9 @@ let play_property property ({ table = player, _; _ } as game) =
       (* TODO: Handle playing a color that's already set.
          When the selected color is complete, the card should be part of a
          different set of the same color. *)
-      game |> update_player (Player.add_property property player) |> set_phase Play
+      game
+      |> update_player (Player.add_property property player)
+      |> set_phase Play
 
 let play_money card game =
   game |> update_player (current_player game |> Player.add_money card)
@@ -210,9 +212,12 @@ let update game =
   | Play -> play game
   | Discard -> discard game
   | Play_dual { card; value } ->
-      Card.(Property.Dual (card, value)) |> Fun.flip play_property game
+      let card = Card.(Property.Dual (card, value)) in
+      play_property card game
   | Play_wild { colors; index } ->
-      Card.(Property.Wild (Some (List.nth colors index))) |> Fun.flip play_property game
+      let color = List.nth colors index in
+      let card = Card.(Property.Wild (Some color)) in
+      play_property card game
   | Show_table -> game
   | Collect_rent _ -> failwith "todo"
   | Play_action { action; as_money } ->
