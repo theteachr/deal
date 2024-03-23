@@ -2,7 +2,7 @@ open Deal
 
 let view_bank bank =
   bank
-  |> List.map Card.Money.display
+  |> List.map Card.Money.display_short
   |> String.concat ", "
   |> Printf.sprintf "[%s]"
 
