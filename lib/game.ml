@@ -17,7 +17,6 @@ module State = struct
     | Play_dual of {
         card : Card.Dual.t;
         value : int;
-        colored : Card.Dual.colored; (* TODO: Remove this field *)
       }
     | Play_wild of {
         colors : Color.t list;
@@ -64,9 +63,10 @@ let set_message message game =
 let set_phase phase game = { game with state = { game.state with phase } }
 let set_index index game = { game with state = { game.state with index } }
 
-let select colored f ({ state; _ } as game) =
+let select f ({ state; _ } as game) =
   match state.phase with
-  | Play_dual props -> game |> set_phase @@ Play_dual { props with colored }
+  | Play_dual ({ card; _ } as props) ->
+      game |> set_phase @@ Play_dual { props with card = Card.Dual.switch card }
   | Play_wild props ->
       game
       |> set_phase
@@ -78,8 +78,8 @@ let select colored f ({ state; _ } as game) =
       game
       |> set_index @@ f state.index (List.length (current_player game).hand)
 
-let select_next game = select Card.Dual.Right next_index game
-let select_prev game = select Card.Dual.Left prev_index game
+let select_next game = select next_index game
+let select_prev game = select prev_index game
 
 let draw_from_deck n game =
   let cards, deck =
@@ -120,10 +120,13 @@ let discard ({ table = player, _; _ } as game) =
 let play_property property ({ table = player, _; _ } as game) =
   match property with
   | Card.Property.Dual (({ colored = None; _ } as dual), value) ->
-      set_phase (Play_dual { card = dual; value; colored = Left }) game
+      game
+      |> set_phase @@ Play_dual { card = Card.Dual.choose Left dual; value }
       |> Result.ok
   | Wild None ->
-      set_phase (Play_wild { colors = Color.all; index = 0 }) game |> Result.ok
+      game
+      |> set_phase @@ Play_wild { colors = Color.all; index = 0 }
+      |> Result.ok
   | _ ->
       (* TODO: Allow the player to have two sets of the same color.
          Recently found out that we can own two different sets of the same
@@ -219,9 +222,8 @@ let update game =
   match game.state.phase with
   | Play -> play game
   | Discard -> discard game
-  | Play_dual { card; colored; value } ->
-      Card.(Property.Dual (Dual.choose colored card, value))
-      |> play_wild_card game
+  | Play_dual { card; value } ->
+      Card.(Property.Dual (card, value)) |> play_wild_card game
   | Play_wild { colors; index } ->
       Card.(Property.Wild (Some (List.nth colors index))) |> play_wild_card game
   | Show_table -> game

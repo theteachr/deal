@@ -33,19 +33,21 @@ let view_properties properties =
   |> String.concat "\n"
 
 let view_dual Player.{ assets = { properties; _ }; _ }
-    Card.Dual.{ colors = a, b; _ } colored =
+    Card.Dual.{ colors = a, b; colored } =
   let color_a = Color.display a in
   let color_b = Color.display b in
   let selected =
-    match colored with
-    | Card.Dual.Left -> Printf.sprintf {|
+    colored
+    |> Option.map (function
+         | Card.Dual.Left -> Printf.sprintf {|
 > %s
   %s
 |} color_a color_b
-    | Right -> Printf.sprintf {|
+         | Right -> Printf.sprintf {|
   %s
 > %s
-|} color_a color_b
+|} color_a color_b)
+    |> Option.value ~default:(Printf.sprintf "  %s\n  %s" color_a color_b)
   in
   Printf.sprintf {|
 %s
@@ -131,7 +133,7 @@ let view
     | Game.State.Show_table -> view_table opponents
     | Play -> view_play game
     | Discard -> view_discard player index
-    | Play_dual { card; colored; _ } -> view_dual player card colored
+    | Play_dual { card; _ } -> view_dual player card
     | Play_wild { colors; index } -> view_wild player colors index
     | Collect_rent { got; want; targets } -> view_collect_rent got want targets
     | Play_action { as_money; _ } ->
