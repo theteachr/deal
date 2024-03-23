@@ -1,7 +1,6 @@
 module Table = struct
   type t = Player.t * Player.t list
 
-  let update player (_, opponents) = (player, opponents)
   let opponents (_, opponents) = opponents
 
   let turn (current, opponents) =
@@ -60,8 +59,18 @@ let current_player { table = player, _; _ } = player
 let set_message message game =
   { game with state = { game.state with message = Some message } }
 
+let update_player player game =
+  { game with table = (player, Table.opponents game.table) }
+
 let set_phase phase game = { game with state = { game.state with phase } }
 let set_index index game = { game with state = { game.state with index } }
+let reclaim card game = { game with discarded = card :: game.discarded }
+
+let record_play card game =
+  {
+    game with
+    state = { game.state with cards_played = card :: game.state.cards_played };
+  }
 
 let select f ({ state; _ } as game) =
   match state.phase with
@@ -92,8 +101,7 @@ let draw_from_deck n game =
            (List.rev_append cards drawn, deck))
   in
   let player = Player.update_hand (current_player game) cards in
-  (* TODO: Define a setter to update the current player *)
-  { game with table = Table.update player game.table; deck }
+  { (update_player player game) with deck }
 
 let next game =
   let n = if Player.empty_hand (current_player game) then 5 else 2 in
@@ -110,12 +118,11 @@ let pass ({ table = player, _; _ } as game) =
 
 let discard ({ table = player, _; _ } as game) =
   let card, player = Player.remove_from_hand game.state.index player in
-  {
-    game with
-    discarded = card :: game.discarded;
-    table = Table.update player game.table;
-    state = { game.state with phase = Discard; index = 0 };
-  }
+  game
+  |> reclaim card
+  |> update_player player
+  |> set_phase Discard
+  |> set_index 0
   |> pass
 
 let play_property property ({ table = player, _; _ } as game) =
@@ -135,18 +142,10 @@ let play_property property ({ table = player, _; _ } as game) =
       if Player.has_full_set (Card.Property.color property) player then
         Error `Full_set
       else
-        {
-          game with
-          table = Table.update (Player.add_property property player) game.table;
-        }
-        |> Result.ok
+        game |> update_player (Player.add_property property player) |> Result.ok
 
 let play_money card game =
-  {
-    game with
-    table =
-      Table.update (current_player game |> Player.add_money card) game.table;
-  }
+  game |> update_player (current_player game |> Player.add_money card)
 
 let play_pass_go game =
   {
@@ -192,24 +191,17 @@ let play_card game =
          let card, player =
            Player.remove_from_hand game.state.index (current_player game)
          in
-         {
-           game with
-           table = Table.update player game.table;
-           (* XXX: In some cases, immediately adding the card here isn't right.
-              For instance, when the player is playing a wild property card,
-              they will be choosing the color, and will not have played it
-              yet. When we add it here, we won't be able to show the chosen
-              color. *)
-           state =
-             {
-               game.state with
-               index = 0;
-               cards_played = card :: game.state.cards_played;
-               message =
-                 Printf.sprintf "%s played %s." player.name (Card.display card)
-                 |> Option.some;
-             };
-         })
+         (* XXX: In some cases, immediately adding the card here isn't right.
+            For instance, when the player is playing a wild property card,
+            they will be choosing the color, and will not have played it
+            yet. When we add it here, we won't be able to show the chosen
+            color. *)
+         game
+         |> record_play card
+         |> update_player player
+         |> set_index 0
+         |> set_message
+            @@ Printf.sprintf "%s played %s." player.name (Card.display card))
 
 let over { table = { assets; _ }, _; _ } =
   assets |> Player.Assets.full_property_sets |> List.length >= 3
