@@ -92,6 +92,7 @@ let draw_from_deck n game =
            (List.rev_append cards drawn, deck))
   in
   let player = Player.update_hand (current_player game) cards in
+  (* TODO: Define a setter to update the current player *)
   { game with table = Table.update player game.table; deck }
 
 let next game =
@@ -128,9 +129,9 @@ let play_property property ({ table = player, _; _ } as game) =
       |> set_phase @@ Play_wild { colors = Color.all; index = 0 }
       |> Result.ok
   | _ ->
-      (* TODO: Allow the player to have two sets of the same color.
-         Recently found out that we can own two different sets of the same
-         color. *)
+      (* TODO: Handle playing a color that's already set.
+         When the selected color is complete, the card should be part of a
+         different set of the same color. *)
       if Player.has_full_set (Card.Property.color property) player then
         Error `Full_set
       else
@@ -194,6 +195,11 @@ let play_card game =
          {
            game with
            table = Table.update player game.table;
+           (* XXX: In some cases, immediately adding the card here isn't right.
+              For instance, when the player is playing a wild property card,
+              they will be choosing the color, and will not have played it
+              yet. When we add it here, we won't be able to show the chosen
+              color. *)
            state =
              {
                game.state with
