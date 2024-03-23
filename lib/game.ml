@@ -17,7 +17,7 @@ module State = struct
     | Play_dual of {
         card : Card.Dual.t;
         value : int;
-        colored : Card.Dual.colored;
+        colored : Card.Dual.colored; (* TODO: Remove this field *)
       }
     | Play_wild of {
         colors : Color.t list;
@@ -25,12 +25,15 @@ module State = struct
       }
     | Show_table
     | Collect_rent of {
-        card : Card.t; (* FIXME: Invalid state *)
         want : int;
         got : int;
         targets : Player.t * Player.t list;
       }
-    (* TODO: Rearrange cards *)
+    | Play_action of {
+        action : Card.Action.t;
+        as_money : bool;
+      }
+  (* TODO: Rearrange cards *)
 
   type t = {
     cards_played : Card.t list;
@@ -63,13 +66,17 @@ let set_index index game = { game with state = { game.state with index } }
 
 let select colored f ({ state; _ } as game) =
   match state.phase with
-  | Play_dual props -> set_phase (Play_dual { props with colored }) game
+  | Play_dual props -> game |> set_phase @@ Play_dual { props with colored }
   | Play_wild props ->
-      set_phase
-        (Play_wild
-           { props with index = f props.index (List.length props.colors) })
-        game
-  | _ -> set_index (f state.index (List.length (current_player game).hand)) game
+      game
+      |> set_phase
+         @@ Play_wild
+              { props with index = f props.index (List.length props.colors) }
+  | Play_action a ->
+      game |> set_phase @@ Play_action { a with as_money = not a.as_money }
+  | _ ->
+      game
+      |> set_index @@ f state.index (List.length (current_player game).hand)
 
 let select_next game = select Card.Dual.Right next_index game
 let select_prev game = select Card.Dual.Left prev_index game
@@ -127,14 +134,6 @@ let play_property property ({ table = player, _; _ } as game) =
         {
           game with
           table = Table.update (Player.add_property property player) game.table;
-          state =
-            {
-              game.state with
-              message =
-                Printf.sprintf "%s played %s." player.name
-                  (Card.Property.display property)
-                |> Option.some;
-            };
         }
         |> Result.ok
 
@@ -143,56 +142,38 @@ let play_money card game =
     game with
     table =
       Table.update (current_player game |> Player.add_money card) game.table;
-    state =
-      {
-        game.state with
-        message =
-          Printf.sprintf "%s played %s." (current_player game).name
-            (Card.Money.display card)
-          |> Option.some;
-      };
   }
-  |> Result.ok
 
-let play_pass_go card game =
+let play_pass_go game =
   {
     (draw_from_deck 2 game) with
-    state =
-      {
-        game.state with
-        index = game.state.index + 2;
-        message =
-          Printf.sprintf "%s played %s." (current_player game).name
-            (Card.display card)
-          |> Option.some;
-      };
+    state = { game.state with index = game.state.index + 2 };
   }
-  |> Result.ok
 
-let play_birthday card game =
+let play_birthday game =
   let targets = Table.opponents game.table in
   game
   |> set_phase
      @@ Collect_rent
-          {
-            card;
-            want = 2;
-            got = 0;
-            targets = (List.hd targets, List.tl targets);
-          }
+          { want = 2; got = 0; targets = (List.hd targets, List.tl targets) }
   |> set_message
      @@ Printf.sprintf "%s has played the Birthday card. Everyone should pay 2."
           (current_player game).name
   |> Result.ok
 
+let play_action action game =
+  match action with
+  | Card.Action.Pass_go -> Ok (play_pass_go game)
+  | Birthday -> play_birthday game
+  | action -> Error (`Not_implemented (Card.Action.name action))
+
 let play_card game =
   let card = List.nth (current_player game).hand game.state.index in
   (match card with
   | Card.Property card -> play_property card game
-  | Money card -> play_money card game
-  | Action Pass_go -> play_pass_go card game
-  | Action Birthday -> play_birthday card game
-  | Action action -> Error (`Not_implemented (Card.Action.name action))
+  | Money card -> Ok (play_money card game)
+  | Action action ->
+      Ok (game |> set_phase @@ Play_action { action; as_money = false })
   | Rent _ -> Error (`Not_implemented "rent"))
   |> Result.fold
        ~error:(fun error ->
@@ -215,6 +196,9 @@ let play_card game =
                game.state with
                index = 0;
                cards_played = card :: game.state.cards_played;
+               message =
+                 Printf.sprintf "%s played %s." player.name (Card.display card)
+                 |> Option.some;
              };
          })
 
@@ -242,6 +226,14 @@ let update game =
       Card.(Property.Wild (Some (List.nth colors index))) |> play_wild_card game
   | Show_table -> game
   | Collect_rent _ -> failwith "todo"
+  | Play_action { action; as_money } ->
+      if as_money then
+        game |> play_money @@ Card.Money.Action action |> set_phase Play
+      else
+        game
+        |> play_action action
+        |> Result.map (set_phase Play)
+        |> Result.get_ok
 
 let turn game = { game with table = Table.turn game.table }
 

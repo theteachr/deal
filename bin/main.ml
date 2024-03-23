@@ -2,7 +2,7 @@ open Deal
 
 let view_bank bank =
   bank
-  |> List.map (fun card -> string_of_int @@ Card.Money.value card)
+  |> List.map Card.Money.display
   |> String.concat ", "
   |> Printf.sprintf "[%s]"
 
@@ -32,7 +32,7 @@ let view_properties properties =
   |> List.map view_set
   |> String.concat "\n"
 
-let view_dual Player.{ name; assets = { properties; _ }; _ }
+let view_dual Player.{ assets = { properties; _ }; _ }
     Card.Dual.{ colors = a, b; _ } colored =
   let color_a = Color.display a in
   let color_b = Color.display b in
@@ -48,11 +48,9 @@ let view_dual Player.{ name; assets = { properties; _ }; _ }
 |} color_a color_b
   in
   Printf.sprintf {|
-%s is playing a dual card.
 %s
 %s
-|} name selected
-    (view_properties properties)
+|} selected (view_properties properties)
 
 let view_table players =
   players
@@ -87,39 +85,26 @@ let view_wild Player.{ name; assets = { properties; _ }; _ } colors index =
     (view_properties properties)
 
 let view_collect_rent got want
-    (Player.{ name; assets = { bank; properties }; _ }, next_targets) card =
+    (Player.{ name; assets = { bank; properties }; _ }, next_targets) =
   Printf.sprintf
     {|
 Got: %d
 Want: %d
 Target(s): %s [%s]
-Card: %s
 
 Bank: %s
 Properties:
 %s
-|}
-    got want name
+|} got want
+    name
     (next_targets
     |> List.map (fun Player.{ name; _ } -> name)
     |> String.concat "; ")
-    (Card.display card) (view_bank bank)
+    (view_bank bank)
     (view_properties properties)
 
 let view_play Game.{ table = player, _; deck; state; _ } =
-  let cards_turned =
-    state.cards_played |> List.map Card.display |> String.concat ", "
-  in
-  let phrase =
-    if List.length state.cards_played = 3 then
-      "has played all cards in the turn."
-    else "is playing."
-  in
-  Printf.sprintf
-    {|
-%s %s
-This turn: [%s]
-
+  Printf.sprintf {|
 %s
 
 Bank: %s
@@ -127,7 +112,6 @@ Properties:
 %s
 
 %d card(s) in the deck.|}
-    player.name phrase cards_turned
     (view_selected player.hand state.index Card.display)
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)
@@ -137,8 +121,11 @@ Properties:
 
 let view
     Game.(
-      { state = { phase; index; message; _ }; table = player, opponents; _ } as
-      game) =
+      {
+        state = { phase; index; message; cards_played; _ };
+        table = player, opponents;
+        _;
+      } as game) =
   let content =
     match phase with
     | Game.State.Show_table -> view_table opponents
@@ -146,11 +133,23 @@ let view
     | Discard -> view_discard player index
     | Play_dual { card; colored; _ } -> view_dual player card colored
     | Play_wild { colors; index } -> view_wild player colors index
-    | Collect_rent { got; want; card; targets } ->
-        view_collect_rent got want targets card
+    | Collect_rent { got; want; targets } -> view_collect_rent got want targets
+    | Play_action { as_money; _ } ->
+        if as_money then Printf.sprintf {|
+  Play
+> Use as money
+|}
+        else Printf.sprintf {|
+> Play
+  Use as money
+|}
   in
-  Printf.sprintf {|%s
-%s|} content
+  Printf.sprintf {|%s is playing.
+This turn: [%s]
+%s
+%s|} player.name
+    (cards_played |> List.map Card.display |> String.concat ", ")
+    content
     (match message with
     | Some content -> Printf.sprintf "Message: %s" content
     | None -> "")
