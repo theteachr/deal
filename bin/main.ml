@@ -50,8 +50,7 @@ let view_dual Player.{ assets = { properties; _ }; _ }
   Printf.sprintf {|
 %s
 %s
-|} selected
-    (view_properties properties)
+|} selected (view_properties properties)
 
 let view_table players =
   players
