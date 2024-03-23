@@ -10,6 +10,7 @@ module Table = struct
 end
 
 module State = struct
+  (* XXX: This can be a type state instead of an enum *)
   type phase =
     | Play
     | Discard
@@ -118,11 +119,7 @@ let pass ({ table = player, _; _ } as game) =
 
 let discard ({ table = player, _; _ } as game) =
   let card, player = Player.remove_from_hand game.state.index player in
-  game
-  |> reclaim card
-  |> update_player player
-  |> set_index 0
-  |> pass
+  game |> reclaim card |> update_player player |> set_index 0 |> pass
 
 let play_property property ({ table = player, _; _ } as game) =
   match property with
@@ -170,7 +167,7 @@ let play_card game =
   | Action action ->
       (* XXX: This isn't quite right.
          We won't always be ok, because the player might choose to use the
-         action in a invalid context. *)
+         action in an invalid context. *)
       Ok (game |> set_phase @@ Play_action { action; as_money = false })
   | Rent _ -> Error (`Not_implemented "rent"))
   |> Result.fold
