@@ -137,6 +137,7 @@ let view
     | Play_wild { colors; index } -> view_wild player colors index
     | Collect_rent { got; want; targets } -> view_collect_rent got want targets
     | Play_action { as_money; _ } ->
+        (* TODO: Move these static strings into a different place. *)
         if as_money then Printf.sprintf {|
   Play
 > Use as money
@@ -174,7 +175,7 @@ let rec loop game =
   | "f" -> Game.pass game |> loop
   (* play card *)
   | "p" -> Game.update game |> loop
-  (* FIXME: Pressing this when asking for rent results in a loss of state *)
+  (* FIXME: Pressing this when asking for rent; results in a loss of state *)
   | "v" -> Game.show_table game |> loop
   (* go back to play *)
   | "b" -> Game.back game |> loop
@@ -185,4 +186,3 @@ let () =
     List.map Player.create [ "theteachr"; "j"; "oat"; "patate"; "def" ]
   in
   loop (Game.start players)
-(* Minttea.start deal ~initial_model:(Game.start players) *)
