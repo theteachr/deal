@@ -130,19 +130,13 @@ let play_property property ({ table = player, _; _ } as game) =
   | Card.Property.Dual (({ colored = None; _ } as dual), value) ->
       game
       |> set_phase @@ Play_dual { card = Card.Dual.choose Left dual; value }
-      |> Result.ok
   | Wild None ->
-      game
-      |> set_phase @@ Play_wild { colors = Color.all; index = 0 }
-      |> Result.ok
+      game |> set_phase @@ Play_wild { colors = Color.all; index = 0 }
   | _ ->
       (* TODO: Handle playing a color that's already set.
          When the selected color is complete, the card should be part of a
          different set of the same color. *)
-      if Player.has_full_set (Card.Property.color property) player then
-        Error `Full_set
-      else
-        game |> update_player (Player.add_property property player) |> Result.ok
+      game |> update_player (Player.add_property property player) |> set_phase Play
 
 let play_money card game =
   game |> update_player (current_player game |> Player.add_money card)
@@ -170,7 +164,7 @@ let play_action action game =
 let play_card game =
   let card = List.nth (current_player game).hand game.state.index in
   (match card with
-  | Card.Property card -> play_property card game
+  | Card.Property card -> Ok (play_property card game)
   | Money card -> Ok (play_money card game)
   | Action action ->
       (* XXX: This isn't quite right.
@@ -211,19 +205,14 @@ let play game =
     set_message "Can't play any more cards in this turn." game
   else play_card game
 
-let play_wild_card game card =
-  play_property card game
-  |> Result.fold ~ok:(set_phase Play) ~error:(function `Full_set ->
-         set_message "You already have a full set for that color." game)
-
 let update game =
   match game.state.phase with
   | Play -> play game
   | Discard -> discard game
   | Play_dual { card; value } ->
-      Card.(Property.Dual (card, value)) |> play_wild_card game
+      Card.(Property.Dual (card, value)) |> Fun.flip play_property game
   | Play_wild { colors; index } ->
-      Card.(Property.Wild (Some (List.nth colors index))) |> play_wild_card game
+      Card.(Property.Wild (Some (List.nth colors index))) |> Fun.flip play_property game
   | Show_table -> game
   | Collect_rent _ -> failwith "todo"
   | Play_action { action; as_money } ->
