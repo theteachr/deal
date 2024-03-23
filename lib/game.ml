@@ -148,10 +148,7 @@ let play_money card game =
   game |> update_player (current_player game |> Player.add_money card)
 
 let play_pass_go game =
-  {
-    (draw_from_deck 2 game) with
-    state = { game.state with index = game.state.index + 2 };
-  }
+  game |> draw_from_deck 2 |> set_index (game.state.index + 2) |> set_phase Play
 
 let play_birthday game =
   let targets = Table.opponents game.table in
@@ -176,6 +173,9 @@ let play_card game =
   | Card.Property card -> play_property card game
   | Money card -> Ok (play_money card game)
   | Action action ->
+      (* XXX: This isn't quite right.
+         We won't always be ok, because the player might choose to use the
+         action in a invalid context. *)
       Ok (game |> set_phase @@ Play_action { action; as_money = false })
   | Rent _ -> Error (`Not_implemented "rent"))
   |> Result.fold
@@ -229,11 +229,7 @@ let update game =
   | Play_action { action; as_money } ->
       if as_money then
         game |> play_money @@ Card.Money.Action action |> set_phase Play
-      else
-        game
-        |> play_action action
-        |> Result.map (set_phase Play)
-        |> Result.get_ok
+      else game |> play_action action |> Result.get_ok
 
 let turn game = { game with table = Table.turn game.table }
 
