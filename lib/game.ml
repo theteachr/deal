@@ -121,7 +121,6 @@ let discard ({ table = player, _; _ } as game) =
   game
   |> reclaim card
   |> update_player player
-  |> set_phase Discard
   |> set_index 0
   |> pass
 
