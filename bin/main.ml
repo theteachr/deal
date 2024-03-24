@@ -105,27 +105,25 @@ Properties:
     (view_bank bank)
     (view_properties properties)
 
-let view_play Game.{ table = player, _; deck; state; _ } =
+let view_play Game.{ table = player, _; state; _ } =
   Printf.sprintf {|
 %s
 
 Bank: %s
 Properties:
-%s
-
-%d card(s) in the deck.|}
+%s|}
     (view_selected player.hand state.index Card.display)
     (view_bank player.assets.bank)
     (view_properties player.assets.properties)
-    (* TODO: Don't view selectable hand when the player has already played
-       3 cards. *)
-    (Deck.count deck)
+(* TODO: Don't view selectable hand when the player has already played
+   3 cards. *)
 
 let view
     Game.(
       {
         state = { phase; index; message; cards_played; _ };
         table = player, opponents;
+        deck;
         _;
       } as game) =
   let content =
@@ -147,15 +145,18 @@ let view
   Use as money
 |}
   in
-  Printf.sprintf {|%s is playing.
+  Printf.sprintf
+    {|%s is playing.
 This turn: [%s]
 %s
-%s|} player.name
+%s
+%d card(s) in the deck.|} player.name
     (cards_played |> List.map Card.display |> String.concat ", ")
     content
     (match message with
     | Some content -> Printf.sprintf "Message: %s" content
     | None -> "")
+    (Deck.count deck)
 
 let clear_screen () =
   let _ = Sys.command "clear" in
