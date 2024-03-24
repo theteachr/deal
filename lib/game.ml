@@ -10,7 +10,7 @@ module Table = struct
 end
 
 module State = struct
-  (* XXX: This can be a type state instead of an enum *)
+  (* XXX: This can be a type state instead of an enum. *)
   type phase =
     | Play
     | Discard
@@ -37,6 +37,7 @@ module State = struct
   type t = {
     cards_played : Card.t list;
     phase : phase;
+    (* TODO: Let there always be a message. *)
     message : string option;
     index : int;
   }
@@ -165,7 +166,7 @@ let play_card game =
   | Card.Property card -> Ok (play_property card game)
   | Money card -> Ok (play_money card game)
   | Action action ->
-      (* XXX: This isn't quite right.
+      (* FIXME: This isn't quite right.
          We won't always be ok, because the player might choose to use the
          action in an invalid context. *)
       Ok (game |> set_phase @@ Play_action { action; as_money = false })
@@ -183,7 +184,7 @@ let play_card game =
          let card, player =
            Player.remove_from_hand game.state.index (current_player game)
          in
-         (* XXX: In some cases, immediately adding the card here isn't right.
+         (* FIXME: Immediately adding the card here isn't right.
             For instance, when the player is playing a wild property card,
             they will be choosing the color, and will not have played it
             yet. When we add it here, we won't be able to show the chosen

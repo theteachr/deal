@@ -118,6 +118,8 @@ Properties:
 (* TODO: Don't view selectable hand when the player has already played
    3 cards. *)
 
+(* TODO: Let all static be grouped.
+   Helps reduce the amount of moving things. *)
 let view
     Game.(
       {
