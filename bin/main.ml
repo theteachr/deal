@@ -167,7 +167,9 @@ let clear_screen () =
 let rec loop game =
   clear_screen ();
   print_endline (view game);
-  if Game.over game then () else print_string "> ";
+  if Game.over game then
+    Printf.printf "%s won!\n" (Game.current_player game).name
+  else print_string "> ";
   Stdlib.(flush stdout);
   match Scanf.scanf " %s" Fun.id with
   (* quit *)
